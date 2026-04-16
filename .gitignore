@@ -1,0 +1,75 @@
+# ==================== 依赖目录 ====================
+node_modules/
+*/node_modules/
+**/node_modules/
+
+# ==================== 环境变量文件 ====================
+.env
+.env.local
+.env.*.local
+backend-api/.env
+frontend-web-admin/.env
+mobile-app/.env
+
+# ==================== 日志文件 ====================
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==================== 编辑器目录和文件 ====================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+*.swp
+*~
+
+# ==================== 构建产物 ====================
+dist/
+dist-ssr/
+build/
+*.local
+.output/
+.nuxt/
+.next/
+
+# ==================== 上传文件目录 ====================
+backend-api/uploads/*
+!backend-api/uploads/.gitkeep
+!backend-api/uploads/avatars/.gitkeep
+
+# ==================== 临时文件 ====================
+*.tmp
+*.temp
+.cache/
+.temp/
+*.log
+
+# ==================== 测试覆盖率 ====================
+coverage/
+*.lcov
+.nyc_output/
+
+# ==================== uni-app 编译产物 ====================
+.hbuilderx/
+unpackage/
+dist/build/
+dist/dev/
+
+# ==================== 系统文件 ====================
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ==================== 锁文件（可选保留一个） ====================
+# 如果团队使用npm，保留package-lock.json
+# 如果团队使用yarn，保留yarn.lock
+# 如果团队使用pnpm，保留pnpm-lock.yaml
+# yarn.lock
+# pnpm-lock.yaml

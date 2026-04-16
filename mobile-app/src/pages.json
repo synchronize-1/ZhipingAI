@@ -1,0 +1,32 @@
+{
+  "pages": [
+    { "path": "pages/index/index", "style": { "navigationBarTitleText": "智界·灵动校园", "navigationStyle": "custom" } },
+    { "path": "pages/login/login", "style": { "navigationBarTitleText": "登录", "navigationStyle": "custom" } },
+    { "path": "pages/schedule/schedule", "style": { "navigationBarTitleText": "我的课表" } },
+    { "path": "pages/map/map", "style": { "navigationBarTitleText": "校园导航" } },
+    { "path": "pages/services/services", "style": { "navigationBarTitleText": "校园服务" } },
+    { "path": "pages/assistant/assistant", "style": { "navigationBarTitleText": "校园助手", "navigationStyle": "custom" } },
+    { "path": "pages/profile/profile", "style": { "navigationBarTitleText": "我的" } },
+    { "path": "pages/notifications/notifications", "style": { "navigationBarTitleText": "消息通知" } },
+    { "path": "pages/activities/activities", "style": { "navigationBarTitleText": "校园活动" } },
+    { "path": "pages/canteen/canteen", "style": { "navigationBarTitleText": "食堂人流" } },
+    { "path": "pages/profile/growth", "style": { "navigationBarTitleText": "成长档案" } },
+    { "path": "pages/ai-science/index", "style": { "navigationBarTitleText": "AI科普乐园", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/chat", "style": { "navigationBarTitleText": "AI对话", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/painting", "style": { "navigationBarTitleText": "AI绘画", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/writing", "style": { "navigationBarTitleText": "AI写作", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/ocr", "style": { "navigationBarTitleText": "文字识别", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/sentiment", "style": { "navigationBarTitleText": "情感分析", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/turing-test", "style": { "navigationBarTitleText": "图灵测试", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/history", "style": { "navigationBarTitleText": "AI历史", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/pioneers", "style": { "navigationBarTitleText": "AI名人堂", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/principles", "style": { "navigationBarTitleText": "AI原理", "navigationStyle": "custom" } },
+    { "path": "pages/ai-science/applications", "style": { "navigationBarTitleText": "AI应用", "navigationStyle": "custom" } }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "智界·灵动校园",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f5"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "smart-campus",
+  "version": "1.0.0",
+  "description": "智界·灵动校园 - 智能校园数字化平台",
+  "scripts": {
+    "start": "npm run dev",
+    "start:backend": "cd backend-api && npm run dev",
+    "start:web": "cd frontend-web-admin && npm run dev",
+    "start:mobile": "cd mobile-app && npm run dev:h5",
+    "install:all": "npm install && cd backend-api && npm install && cd ../frontend-web-admin && npm install && cd ../mobile-app && npm install",
+    "dev": "concurrently \"npm run start:backend\" \"npm run start:web\"",
+    "init:db": "cd backend-api && npm run init:db"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": ["smart-campus", "education", "vue3", "nodejs"],
+  "author": "Smart Campus Team",
+  "license": "MIT"
+}
