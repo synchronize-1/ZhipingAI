@@ -5,7 +5,7 @@
       <div class="banner-content">
         <div class="banner-left">
           <h1>{{ greetingText }}，{{ userStore.user?.name || '管理员' }} 👋</h1>
-          <p>欢迎回到智界·灵动校园管理系统</p>
+          <p>welcome back！</p>
         </div>
         <div class="banner-right">
           <div class="system-status">
@@ -39,7 +39,7 @@
             <span>教师 {{ teacherCount }}</span>
           </div>
         </div>
-        
+
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon green">
@@ -54,7 +54,7 @@
             <span>未签到 {{ notCheckedCount }}</span>
           </div>
         </div>
-        
+
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon orange">
@@ -68,7 +68,7 @@
             <el-progress :percentage="systemLoad" :stroke-width="6" :show-text="false" :color="getLoadColor(systemLoad)" />
           </div>
         </div>
-        
+
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon purple">
@@ -349,9 +349,9 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
-import { 
-  Setting, Refresh, User, Checked, Monitor, Service, 
-  TrendCharts, PieChart, WarningFilled, CircleCloseFilled, 
+import {
+  Setting, Refresh, User, Checked, Monitor, Service,
+  TrendCharts, PieChart, WarningFilled, CircleCloseFilled,
   InfoFilled, Grid, Document, ArrowRight, Reading, OfficeBuilding, Lock, Bell, Calendar, Clock
 } from '@element-plus/icons-vue'
 
@@ -474,10 +474,10 @@ const viewAllLogs = () => {
 
 const updateMainChart = () => {
   if (!mainChartRef.value) return
-  
+
   const chart = echarts.getInstanceByDom(mainChartRef.value) || echarts.init(mainChartRef.value)
   const data = chartDataMap[chartTimeRange.value]
-  
+
   chart.setOption({
     tooltip: { trigger: 'axis' },
     legend: { data: ['访问量', '活跃用户', '新增用户'], right: 20 },
@@ -494,7 +494,7 @@ const updateMainChart = () => {
         type: 'line',
         smooth: true,
         data: data.visits,
-        areaStyle: { 
+        areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: 'rgba(102, 126, 234, 0.4)' },
             { offset: 1, color: 'rgba(102, 126, 234, 0.05)' }
@@ -507,7 +507,7 @@ const updateMainChart = () => {
         type: 'line',
         smooth: true,
         data: data.activeUsers,
-        areaStyle: { 
+        areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: 'rgba(16, 185, 129, 0.4)' },
             { offset: 1, color: 'rgba(16, 185, 129, 0.05)' }
@@ -519,7 +519,7 @@ const updateMainChart = () => {
         name: '新增用户',
         type: 'bar',
         data: data.newUsers,
-        itemStyle: { 
+        itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: '#f59e0b' },
             { offset: 1, color: '#fbbf24' }
@@ -1014,7 +1014,6 @@ onMounted(() => {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
   .main-content {
     grid-template-columns: 1fr;
   }
@@ -1024,11 +1023,11 @@ onMounted(() => {
   .metrics-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .usage-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .manage-grid {
     grid-template-columns: 1fr;
   }

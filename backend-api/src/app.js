@@ -64,9 +64,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000||3001;
 server.listen(PORT, () => {
-  console.log(`🚀 智能校园后端服务已启动: http://localhost:${PORT}`);
+  console.log(`🚀 智评AI后端服务已启动: http://localhost:${PORT}`);
   console.log(`📡 WebSocket服务已启动`);
 });
 

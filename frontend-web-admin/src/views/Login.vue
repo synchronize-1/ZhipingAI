@@ -120,12 +120,11 @@ const handleLogin = async () => {
         ElMessage.success('登录成功，欢迎回来！')
         router.push('/')
       } else {
+        console.error('登录失败:', result.message); // 添加调试信息
         ElMessage.error(result.message || '登录失败')
-        setTimeout(() => {
-          // 不跳转，让你能看到错误信息
-        }, 3000000)
       }
     } catch (error) {
+      console.error('登录异常:', error); // 添加调试信息
       ElMessage.error('登录失败，请稍后重试')
     } finally {
       loading.value = false
