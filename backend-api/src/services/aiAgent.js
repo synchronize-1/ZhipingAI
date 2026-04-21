@@ -1,6 +1,7 @@
 const axios = require('axios');
-
-const AI_AGENT_URL = 'http://10.138.50.151:8004/api/agent/chat';
+//original AI_AGENT_URL
+// const AI_AGENT_URL = 'http://10.138.50.151:8004/api/agent/chat';
+const AI_AGENT_URL = 'http://localhost:8004/api/agent/chat';
 
 class AIAgentService {
   /**

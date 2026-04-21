@@ -198,16 +198,22 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const userStore = useUserStore()
   const role = userStore.user?.role
-  
+
+  //登录成功才能查看
+  // console.log('当前路径：',to.path);
+  // console.log('用户角色；',role);
+
   // 未登录用户访问需要认证的页面，跳转登录
   if (to.meta.requiresAuth !== false && !userStore.isLoggedIn) {
-    next('/login')
+      console.log('未登录用户访问需要认证的页面，跳转登录'); // 添加调试信息
+      next('/login')
     return
   }
   
   // 已登录用户访问登录页，跳转到角色对应首页
   if (to.path === '/login' && userStore.isLoggedIn) {
-    const homeRoutes = {
+      console.log('已登录用户访问登录页，跳转到角色对应首页'); // 添加调试信息
+      const homeRoutes = {
       student: '/home',
       teacher: '/home',
       admin: '/'
@@ -218,6 +224,7 @@ router.beforeEach((to, from, next) => {
   
   // 访问 /home 时，根据角色加载对应首页组件
   if (to.path === '/home') {
+    console.log('访问 /home 时，根据角色加载对应首页组件');
     // 首页会根据角色动态渲染不同内容，继续放行
     next()
     return
@@ -225,6 +232,7 @@ router.beforeEach((to, from, next) => {
   
   // 角色权限检查
   if (to.meta.roles && !to.meta.roles.includes(role)) {
+    console.log('无权限访问，跳转到首页');
     // 无权限访问，跳转到首页
     next('/home')
     return
