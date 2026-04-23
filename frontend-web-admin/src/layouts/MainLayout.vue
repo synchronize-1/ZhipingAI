@@ -188,7 +188,7 @@
       <div class="p-6">
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications', 'Security']">
+            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications', 'Security', 'AIHealthAssessment']">
               <component :is="Component" :key="route.path" />
             </keep-alive>
           </transition>
@@ -293,6 +293,7 @@ const menuItems = computed(() => {
     { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },
     { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },
     { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
+    { path: '/admin-health', title: 'AI健康评估', icon: 'DataAnalysis', roles: ['admin'] },
     { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
     { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },
     { path: '/my-attendance', title: '我的考勤', icon: 'Checked', roles: ['student'] },

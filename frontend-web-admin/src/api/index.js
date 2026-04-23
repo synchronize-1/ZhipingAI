@@ -113,5 +113,14 @@ export default {
     delete: id => request.delete(`/notifications/${id}`),
     reminderSettings: () => request.get('/notifications/reminder-settings'),
     updateReminderSettings: data => request.put('/notifications/reminder-settings', data)
+  },
+  aiHealth: {
+    overview: () => request.get('/ai-health/overview'),
+    students: params => request.get('/ai-health/students', { params }),
+    studentDetail: id => request.get(`/ai-health/students/${id}`),
+    warnings: () => request.get('/ai-health/warnings'),
+    recommendations: () => request.get('/ai-health/recommendations'),
+    interventionFeedback: () => request.get('/ai-health/interventions/feedback'),
+    analytics: () => request.get('/ai-health/analytics')
   }
 }
