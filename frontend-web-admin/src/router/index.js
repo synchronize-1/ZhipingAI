@@ -45,9 +45,9 @@ const routes = [
       },
       {
         path: 'admin-health',
-        name: 'AIHealthAssessment',
-        component: () => import('@/views/AIHealthAssessment.vue'),
-        meta: { title: 'AI健康评估', icon: 'Health', roles: ['admin'] }
+        name: 'AIHealthDashboard',
+        component: () => import('@/views/ai-health/AIHealthDashboard.vue'),
+        meta: { title: 'AI健康评估', icon: 'DataAnalysis', roles: ['admin'] }
       },
       {
         path: 'users',

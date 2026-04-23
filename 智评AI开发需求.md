@@ -1,12 +1,16 @@
+# 智评AI平台 - 需求文档（更新版）
+
 ```markdown
 # 智评AI平台 - 需求文档（完整版）
 
 ## 1. 数据模型与依赖指数计算
 
 ### 1.1 数据来源
-- **学生AI使用记录**：`ai_assistant_usage_student_life.csv`（10000+ 条记录）
-- **学生调查问卷**：`数据集2（AI校园研究调查回答）.xlsx`（241 条记录）
-- **数据库表**：`users`、`grades`、`attendances` 等
+- **学生AI使用记录**：`datasets/ai_assistant_usage_student_life.csv`（10000+ 条记录）
+  - 包含字段：SessionLengthMin, TotalPrompts, TaskType, AI_AssistanceLevel, FinalOutcome, UsedAgain, SatisfactionRating, 使用AI前的成绩, 使用AI后的成绩, Discipline
+- **学生调查问卷**：`datasets/数据集2（AI校园研究调查回答）.xlsx`（241 条记录）
+  - 包含字段：了解程度, 使用频率, 学习使用, 职业兴趣, 了解ChatGPT, 专业
+- **数据库表**：`users`, `grades`, `attendances`, `ai_usage_logs`（待创建）
 
 ### 1.2 依赖指数计算公式
 
@@ -17,8 +21,9 @@
 
 **依赖程度(0-100)**：
 ```
-依赖程度 = (依赖原始分 - min) / (max - min) × 100
+依赖程度 = (依赖原始分 - dataset_min) / (dataset_max - dataset_min) × 100
 ```
+> min/max 从数据集2（调查问卷）中计算，结果为：min = -11, max = 32
 
 **等级划分**：
 | 分数范围 | 等级 |
@@ -57,92 +62,107 @@
 | `/api/ai-health/interventions/feedback` | GET | 获取干预闭环反馈数据 |
 | `/api/ai-health/analytics` | GET | 获取综合指标分析 |
 
-### 2.2 当前实现说明
+### 2.2 数据文件位置
 
-所有接口已实现，当前返回基于数据库真实数据的模拟结果。
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| CSV 数据 | `D:\webstorm_project\SmartCampus-main\datasets\ai_assistant_usage_student_life.csv` | AI使用记录 |
+| Excel 问卷 | `D:\webstorm_project\SmartCampus-main\datasets\数据集2（AI校园研究调查回答）.xlsx` | 依赖指数计算 |
 
-### 2.3 数据接入待办
+### 2.3 数据接入状态
 
-| 待接入项 | 接入方案 |
-|---------|---------|
-| 真实 AI 使用时长 | 创建 `ai_usage_logs` 表，记录每次 AI 会话 |
-| 真实成绩趋势 | 从 `grades` 表查询学生成绩历史 |
-| 真实作业相似度 | 对接作业系统，计算与同学作业/标准答案的相似度 |
-| 预警触发逻辑 | 基于依赖指数和成绩变化实时计算 |
-| 综合指标 | 从 `ai_usage_logs` + `grades` 聚合计算 |
-| CSV 数据导入 | 编写脚本导入历史数据 |
+| 待接入项 | 优先级 | 接入方案 |
+|---------|--------|---------|
+| 创建 `ai_usage_logs` 表 | P0 | 执行建表语句 |
+| 导入 CSV 数据 | P0 | 编写 `scripts/import-csv.js` |
+| 导入 Excel 问卷数据 | P0 | 编写 `scripts/import-excel.js` |
+| 建立用户映射（学科 → user_id） | P0 | CSV 中无学生 ID，需要创建学生记录或随机映射 |
+| 实现依赖指数计算 | P0 | 基于导入的问卷数据 |
+| 实现成绩趋势 | P0 | CSV 中有 100+ 条成绩记录，足够生成趋势 |
+| 实现预警触发逻辑 | P0 | 基于 AI 使用时长和成绩变化 |
+| 实现综合指标 | P1 | 从 CSV 聚合计算 |
 
 ---
 
-## 3. 前端页面
+## 3. 数据库表结构
 
-### 3.1 路由配置
-- 路径：`/admin-health`
-- 组件：`AIHealthAssessment.vue`
-- 权限：仅 `admin` 角色可见
+### 3.1 AI使用记录表 `ai_usage_logs`（待创建）
 
-### 3.2 页面模块
-
-| 模块 | 组件/图表 | 数据来源 |
-|------|----------|---------|
-| 概览 | 卡片展示 | `/overview` |
-| AI使用时长柱状图 | ECharts | `/overview` |
-| 成绩折线图 | ECharts | `/overview` |
-| 学习时长折线图 | ECharts | `/overview` |
-| 依赖程度饼图 | ECharts | `/overview` |
-| 学生搜索 | `el-input` + 列表 | `/students` |
-| 学生详情 | 卡片 + 图表 | `/students/:id` |
-| 预警干预 | 列表展示 | `/warnings` |
-| 替代学习方案 | 列表展示 | `/recommendations` |
-| 干预闭环反馈 | 漏斗图 + 柱状图 | `/interventions/feedback` |
-| 综合指标分析 | KPI卡片 + 散点图 | `/analytics` |
-
----
-
-## 4. 数据库表结构
-
-### 4.1 用户表 `users`
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | INT | 主键 |
-| name | VARCHAR | 姓名 |
-| role | ENUM | student/teacher/admin |
-| student_id | VARCHAR | 学号 |
-| department | VARCHAR | 院系 |
-
-### 4.2 成绩表 `grades`
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| student_id | INT | 学生ID |
-| course_id | INT | 课程ID |
-| score | DECIMAL | 分数 |
-| semester | VARCHAR | 学期 |
-
-### 4.3 考勤表 `attendances`
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| user_id | INT | 用户ID |
-| course_id | INT | 课程ID |
-| status | ENUM | present/late/absent |
-
-### 4.4 AI使用记录表 `ai_usage_logs`（待创建）
 ```sql
 CREATE TABLE ai_usage_logs (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
+  session_id VARCHAR(100),
+  student_level VARCHAR(50),
+  discipline VARCHAR(100),
+  session_date DATE,
   session_length_min DECIMAL(5,2),
   total_prompts INT,
   task_type VARCHAR(50),
   ai_assistance_level INT,
+  final_outcome VARCHAR(50),
+  used_again BOOLEAN,
   satisfaction_rating INT,
+  score_before INT,
+  score_after INT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```
 
+### 3.2 调查问卷表 `ai_survey_responses`（待创建）
+
+```sql
+CREATE TABLE ai_survey_responses (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT,
+  answer_time DATETIME,
+  knowledge_level INT,        -- 了解程度 (1-5)
+  usage_frequency INT,        -- 使用频率 (1-5)
+  study_usage INT,            -- 学习使用 (1-5)
+  career_interest INT,        -- 职业兴趣 (1-5)
+  knows_chatgpt BOOLEAN,      -- 了解ChatGPT
+  major VARCHAR(100),         -- 专业
+  dependence_score DECIMAL(5,2),
+  dependence_level VARCHAR(10),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ---
 
-## 5. 作业相似度
+## 4. 用户映射说明
+
+CSV 中没有直接的学生 ID，只有 `Discipline` 字段。需要建立学科到用户的映射。
+
+**方案**：
+1. 查询系统中现有的学生用户（`role = 'student'`）
+2. 如果没有学生，则先创建一批测试学生（按学科分类）
+3. 将 CSV 记录按 `Discipline` 随机分配到对应学科的学生
+
+**学科映射**：
+| CSV Discipline | 建议创建的用户名 |
+|---------------|-----------------|
+| Computer Science | cs_student_1, cs_student_2, ... |
+| Psychology | psy_student_1, psy_student_2, ... |
+| Business | biz_student_1, biz_student_2, ... |
+| Biology | bio_student_1, bio_student_2, ... |
+| Engineering | eng_student_1, eng_student_2, ... |
+| History | his_student_1, his_student_2, ... |
+| Math | math_student_1, math_student_2, ... |
+
+---
+
+## 5. 成绩数据说明
+
+CSV 中有 `使用AI前的成绩` 和 `使用AI后的成绩` 字段（约100条有效记录），足够用于：
+- 成绩趋势展示（按周/月聚合）
+- 成绩与 AI 使用时长的相关性分析
+- 过度依赖学生中成绩下滑比例计算
+
+---
+
+## 6. 作业相似度
 
 | 相似度范围 | 等级 |
 |-----------|------|
@@ -150,13 +170,13 @@ CREATE TABLE ai_usage_logs (
 | 60% - 80% | 中 |
 | < 60% | 低 |
 
-> **当前状态**：返回固定的 `homeworkSimilarity: 68`（中等）
+> **当前状态**：返回模拟值 68（中等）
 >
-> **接入方案**：从作业系统获取提交内容，使用余弦相似度计算
+> **接入方案**：暂不接入，保持模拟值
 
 ---
 
-## 6. 预警触发规则
+## 7. 预警触发规则
 
 | 等级 | 触发条件 |
 |------|----------|
@@ -164,85 +184,25 @@ CREATE TABLE ai_usage_logs (
 | 中度 | AI使用时长 > 班级平均 50% + 作业相似度 > 80% |
 | 重度 | AI使用时长 > 班级平均 100% + 成绩连续下滑（连续2周下降） |
 
-> **当前状态**：返回固定示例数据
->
-> **实现方案**：创建 `getStudentWarnings(studentId)` 函数，实时计算返回
+> **实现方式**：`/warnings` 接口实时计算，基于 `ai_usage_logs` 统计和成绩变化
 
 ---
 
-## 7. 后端文件结构
-
-```
-backend-api/src/
-├── app.js                    # 应用入口
-├── config/
-│   └── database.js           # MySQL 连接池
-├── middleware/
-│   └── auth.js               # JWT 验证
-├── models/                   # 数据模型
-├── routes/                   # 路由
-│   ├── aiHealth.js           # AI健康评估接口
-│   ├── auth.js               # 登录/注册
-│   ├── users.js              # 用户管理
-│   └── ...
-└── scripts/
-    ├── initDatabase.js       # 数据库初始化
-    └── seed-users.js         # 测试账号导入
-```
-
----
-
-## 8. 前端文件结构
-
-```
-frontend-web-admin/src/
-├── api/
-│   └── index.js              # API 定义
-├── views/
-│   ├── AIHealthAssessment.vue # 智评AI主页面
-│   └── ...
-├── layouts/
-│   └── MainLayout.vue        # 主布局
-├── router/
-│   └── index.js              # 路由配置
-└── stores/
-    └── user.js               # 用户状态
-```
-
----
-
-## 9. 接入步骤
-
-### 9.1 创建 AI 使用记录表
-执行上述 `ai_usage_logs` 建表语句
-
-### 9.2 导入 CSV 数据
-创建 `scripts/import-csv.js`，将 CSV 数据写入 `ai_usage_logs`
-
-### 9.3 更新 `aiHealth.js`
-- 从 `ai_usage_logs` 聚合真实数据
-- 查询真实成绩
-- 实现实时预警计算
-- 从真实数据计算相关系数
-
----
-
-## 10. 当前问题与待办
-
-| 问题 | 优先级 | 解决方案 |
-|------|--------|----------|
-| 概览数据为估算值 | 高 | 创建 `ai_usage_logs` 表并导入 CSV |
-| 成绩趋势为 mock | 高 | 从 `grades` 表查询真实成绩 |
-| 预警为固定示例 | 中 | 实现实时预警计算逻辑 |
-| 作业相似度为固定值 | 中 | 对接作业系统或添加模拟计算 |
-| 依赖指数未持久化 | 中 | 定时任务更新 `users.dependence_score` |
-| 综合指标为固定值 | 低 | 从真实数据聚合计算 |
-
----
-
-## 11. 测试账号
+## 8. 测试账号
 
 | 用户名 | 密码 | 角色 |
 |--------|------|------|
 | admin | admin123 | 管理员 |
+
+---
+
+## 9. 前端组件状态
+
+| 组件 | 状态 | 待完成 |
+|------|------|--------|
+| AIHealthDashboard.vue | ✅ 已完成 | - |
+| AIHealthOverview.vue | ⚠️ 框架完成 | 图表集成 |
+| AIHealthStudentQuery.vue | ⚠️ 框架完成 | 图表集成 |
+| AIHealthWarnings.vue | ⚠️ 框架完成 | 方案推荐区块 |
+| AIHealthAnalytics.vue | ⚠️ 框架完成 | 图表集成 |
 ```
