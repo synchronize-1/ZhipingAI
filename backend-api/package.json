@@ -6,22 +6,25 @@
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
-    "init:db": "node src/scripts/initDatabase.js"
+    "init:db": "node src/scripts/initDatabase.js",
+    "test": "jest --runInBand"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "mysql2": "^3.6.5",
-    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "socket.io": "^4.7.2",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.6.5",
     "node-cron": "^3.0.3",
-    "uuid": "^9.0.1",
-    "axios": "^1.6.0"
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "jest": "^30.3.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2"
   }
 }

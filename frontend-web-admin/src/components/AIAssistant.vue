@@ -29,7 +29,7 @@
               <img src="https://img.icons8.com/3d-fluency/94/robot-2.png" alt="AI" />
             </div>
             <div class="header-info">
-              <h3>智界·AI助手</h3>
+              <h3>智评AI助手</h3>
               <span class="status-dot"></span>
               <span class="status-text">在线</span>
             </div>
@@ -69,7 +69,7 @@
               <img src="https://img.icons8.com/3d-fluency/94/robot-2.png" alt="AI" />
             </div>
             <h3>你好，{{ userName }}！</h3>
-            <p>我是智界·AI助手，可以帮你查询课表、教室、食堂人流等信息，也可以回答你的问题。</p>
+            <p>我是智评AI助手，有什么想问的问题吗🌹</p>
             <div class="welcome-suggestions">
               <div 
                 v-for="suggestion in welcomeSuggestions" 
@@ -159,7 +159,7 @@
             </el-button>
           </div>
           <div class="input-tips">
-            <span>按 Enter 发送 · 支持查询课表、教室、食堂等信息</span>
+            <span>按 Enter 发送</span>
           </div>
         </div>
       </div>
