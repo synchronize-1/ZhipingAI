@@ -43,7 +43,7 @@
       <template #header>
         <div class="card-header">
           <span class="icon">✍️</span>
-          <span class="title">AI写作</span>
+          <span class="title">文艺的你</span>
         </div>
       </template>
       <div class="writing-section">
@@ -71,48 +71,6 @@
         <div v-if="writingResult" class="writing-result">
           <div class="result-text">{{ writingResult }}</div>
           <el-button size="small" @click="copyText(writingResult)">📋 复制</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 文字识别 -->
-    <el-card class="experience-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="icon">📷</span>
-          <span class="title">文字识别(OCR)</span>
-        </div>
-      </template>
-      <div class="ocr-section">
-        <el-upload class="upload-area" drag :auto-upload="false" :on-change="handleOCRUpload" accept="image/*">
-          <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-          <div class="el-upload__text">拖拽图片到此处，或<em>点击上传</em></div>
-        </el-upload>
-        <el-button v-if="ocrImage" type="primary" @click="recognizeText" :loading="ocrLoading">🔍 识别文字</el-button>
-        <div v-if="ocrResult" class="ocr-result">
-          <div class="result-title">识别结果：</div>
-          <div class="result-text">{{ ocrResult }}</div>
-          <el-button size="small" @click="copyText(ocrResult)">📋 复制</el-button>
-        </div>
-      </div>
-    </el-card>
-
-    <!-- 情感分析 -->
-    <el-card class="experience-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <span class="icon">😊</span>
-          <span class="title">情感分析</span>
-        </div>
-      </template>
-      <div class="sentiment-section">
-        <el-input v-model="sentimentText" type="textarea" :rows="3" placeholder="输入一句话，AI来分析情感..." />
-        <el-button type="primary" @click="analyzeSentiment" :loading="sentimentLoading">🔍 分析情感</el-button>
-        <div v-if="sentimentResult" class="sentiment-result">
-          <div class="emotion-icon">{{ getEmotionIcon(sentimentResult.emotion) }}</div>
-          <div class="emotion-name">{{ sentimentResult.emotion }}</div>
-          <el-progress :percentage="sentimentResult.confidence" :stroke-width="20" />
-          <div class="explanation">{{ sentimentResult.explanation }}</div>
         </div>
       </div>
     </el-card>
@@ -191,55 +149,6 @@ async function writeStory() {
   } catch (e) { ElMessage.error('网络错误') }
   finally { writingLoading.value = false }
 }
-
-// OCR
-const ocrImage = ref(null)
-const ocrLoading = ref(false)
-const ocrResult = ref('')
-
-function handleOCRUpload(file) {
-  ocrImage.value = file.raw
-  ocrResult.value = ''
-}
-
-async function recognizeText() {
-  if (!ocrImage.value || ocrLoading.value) return
-  ocrLoading.value = true
-  try {
-    const reader = new FileReader()
-    reader.onload = async (e) => {
-      const base64 = e.target.result.split(',')[1]
-      const res = await axios.post(`${API_BASE}/ocr`, { imageBase64: base64 })
-      if (res.data.success) ocrResult.value = res.data.data.text
-      else ElMessage.error(res.data.message || '识别失败')
-      ocrLoading.value = false
-    }
-    reader.readAsDataURL(ocrImage.value)
-  } catch (e) { ElMessage.error('网络错误'); ocrLoading.value = false }
-}
-
-// 情感分析
-const sentimentText = ref('')
-const sentimentLoading = ref(false)
-const sentimentResult = ref(null)
-
-function getEmotionIcon(emotion) {
-  const map = { '开心': '😄', '难过': '😢', '生气': '😠', '平静': '😌', '惊讶': '😲', '害怕': '😨' }
-  return map[emotion] || '🤔'
-}
-
-async function analyzeSentiment() {
-  if (!sentimentText.value.trim() || sentimentLoading.value) return
-  sentimentLoading.value = true
-  sentimentResult.value = null
-  try {
-    const res = await axios.post(`${API_BASE}/analyze-sentiment`, { text: sentimentText.value })
-    if (res.data.success) sentimentResult.value = res.data.data
-    else ElMessage.error(res.data.message || '分析失败')
-  } catch (e) { ElMessage.error('网络错误') }
-  finally { sentimentLoading.value = false }
-}
-
 // 复制功能
 function copyText(text) {
   navigator.clipboard.writeText(text)
