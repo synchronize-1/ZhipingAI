@@ -1,25 +1,7 @@
 <template>
-  <div class="ai-creative-page">
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <el-icon class="header-icon"><Picture /></el-icon>
-          <div>
-            <h1>AI创意工具</h1>
-            <p>释放创造力，让AI助你实现创意</p>
-          </div>
-        </div>
-        <div class="header-stats">
-          <div class="stat-item">
-            <span class="stat-value">{{ creativeCount }}</span>
-            <span class="stat-label">今日创作</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
+  <div class="ai-creative">
     <div class="page-content">
-      <el-tabs v-model="activeTab" class="ai-tabs">
+      <el-tabs v-model="activeTab" class="creative-tabs">
         <!-- AI绘画 -->
         <el-tab-pane label="AI绘画" name="painting">
           <div class="tab-content">
@@ -33,12 +15,12 @@
               <el-form :model="paintingForm" label-width="100px" class="ai-form">
                 <el-form-item label="图片描述">
                   <el-input
-                    v-model="paintingForm.prompt"
-                    type="textarea"
-                    :rows="4"
-                    placeholder="详细描述你想要的图片，例如：一只在太空漫步的可爱猫咪，背景是璀璨星空..."
-                    maxlength="500"
-                    show-word-limit
+                      v-model="paintingForm.prompt"
+                      type="textarea"
+                      :rows="4"
+                      placeholder="详细描述你想要的图片，例如：一只在太空漫步的可爱猫咪，背景是璀璨星空..."
+                      maxlength="500"
+                      show-word-limit
                   />
                 </el-form-item>
 
@@ -61,12 +43,12 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generatePainting"
-                    :loading="paintingLoading"
-                    :disabled="!paintingForm.prompt.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generatePainting"
+                      :loading="paintingLoading"
+                      :disabled="!paintingForm.prompt.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     开始创作
@@ -100,10 +82,10 @@
               </div>
 
               <el-alert
-                title="温馨提示"
-                type="warning"
-                :closable="false"
-                style="margin-top: 20px;"
+                  title="温馨提示"
+                  type="warning"
+                  :closable="false"
+                  style="margin-top: 20px;"
               >
                 <p>百度文心一格API当前额度已用完，请明天再试或升级套餐。</p>
                 <p>您也可以使用其他AI创意功能：海报设计、思维导图等。</p>
@@ -135,18 +117,18 @@
 
                 <el-form-item label="海报主题">
                   <el-input
-                    v-model="posterForm.title"
-                    placeholder="例如：校园音乐节、社团招新等"
-                    maxlength="50"
+                      v-model="posterForm.title"
+                      placeholder="例如：校园音乐节、社团招新等"
+                      maxlength="50"
                   />
                 </el-form-item>
 
                 <el-form-item label="关键信息">
                   <el-input
-                    v-model="posterForm.info"
-                    type="textarea"
-                    :rows="5"
-                    placeholder="请输入海报需要包含的信息，例如：时间、地点、主办方、联系方式等"
+                      v-model="posterForm.info"
+                      type="textarea"
+                      :rows="5"
+                      placeholder="请输入海报需要包含的信息，例如：时间、地点、主办方、联系方式等"
                   />
                 </el-form-item>
 
@@ -160,12 +142,12 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generatePoster"
-                    :loading="posterLoading"
-                    :disabled="!posterForm.title.trim() || !posterForm.info.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generatePoster"
+                      :loading="posterLoading"
+                      :disabled="!posterForm.title.trim() || !posterForm.info.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI设计海报
@@ -208,18 +190,18 @@
               <el-form :model="mindmapForm" label-width="100px" class="ai-form">
                 <el-form-item label="主题">
                   <el-input
-                    v-model="mindmapForm.topic"
-                    placeholder="例如：学习计划、项目规划、知识点总结等"
-                    maxlength="50"
+                      v-model="mindmapForm.topic"
+                      placeholder="例如：学习计划、项目规划、知识点总结等"
+                      maxlength="50"
                   />
                 </el-form-item>
 
                 <el-form-item label="内容">
                   <el-input
-                    v-model="mindmapForm.content"
-                    type="textarea"
-                    :rows="8"
-                    placeholder="请输入需要整理的内容，AI会自动提取关键信息并生成思维导图结构"
+                      v-model="mindmapForm.content"
+                      type="textarea"
+                      :rows="8"
+                      placeholder="请输入需要整理的内容，AI会自动提取关键信息并生成思维导图结构"
                   />
                 </el-form-item>
 
@@ -232,12 +214,12 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generateMindmap"
-                    :loading="mindmapLoading"
-                    :disabled="!mindmapForm.topic.trim() || !mindmapForm.content.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generateMindmap"
+                      :loading="mindmapLoading"
+                      :disabled="!mindmapForm.topic.trim() || !mindmapForm.content.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI生成导图
@@ -280,9 +262,9 @@
               <el-form :model="pptForm" label-width="100px" class="ai-form">
                 <el-form-item label="PPT主题">
                   <el-input
-                    v-model="pptForm.topic"
-                    placeholder="例如：环境保护、科技创新、历史回顾等"
-                    maxlength="50"
+                      v-model="pptForm.topic"
+                      placeholder="例如：环境保护、科技创新、历史回顾等"
+                      maxlength="50"
                   />
                 </el-form-item>
 
@@ -296,33 +278,33 @@
                 </el-form-item>
 
                 <el-form-item label="页数要求">
-                  <el-slider 
-                    v-model="pptForm.pageCount" 
-                    :min="5" 
-                    :max="30" 
-                    :step="5"
-                    show-stops
-                    :format-tooltip="(val) => `${val}页`"
+                  <el-slider
+                      v-model="pptForm.pageCount"
+                      :min="5"
+                      :max="30"
+                      :step="5"
+                      show-stops
+                      :format-tooltip="(val) => `${val}页`"
                   />
                   <span class="slider-value">{{ pptForm.pageCount }}页</span>
                 </el-form-item>
 
                 <el-form-item label="核心内容">
                   <el-input
-                    v-model="pptForm.content"
-                    type="textarea"
-                    :rows="6"
-                    placeholder="请简要描述PPT需要包含的核心内容和要点"
+                      v-model="pptForm.content"
+                      type="textarea"
+                      :rows="6"
+                      placeholder="请简要描述PPT需要包含的核心内容和要点"
                   />
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generatePPT"
-                    :loading="pptLoading"
-                    :disabled="!pptForm.topic.trim() || !pptForm.content.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generatePPT"
+                      :loading="pptLoading"
+                      :disabled="!pptForm.topic.trim() || !pptForm.content.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI生成大纲
@@ -359,7 +341,13 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import {
+  Brush, MagicStick, CircleCheck, Download, FolderAdd, RefreshRight,
+  Postcard, DocumentCopy, Share, Monitor
+} from '@element-plus/icons-vue'
 import axios from 'axios'
+
+const API_BASE = 'http://localhost:3000/api/ai-science'
 
 const activeTab = ref('painting')
 const creativeCount = ref(0)
@@ -401,7 +389,7 @@ const pptResult = ref('')
 const generatePainting = async () => {
   paintingLoading.value = true
   try {
-    const response = await axios.post('/api/ai-science/generate-image', {
+    const response = await axios.post(`${API_BASE}/generate-image`, {
       prompt: paintingForm.prompt,
       style: paintingForm.style,
       size: paintingForm.size
@@ -410,7 +398,7 @@ const generatePainting = async () => {
     if (response.data.success) {
       const taskId = response.data.data.taskId
       ElMessage.info('图片生成中，请稍候...')
-      
+
       await pollImageResult(taskId)
     } else {
       throw new Error(response.data.message)
@@ -429,8 +417,8 @@ const pollImageResult = async (taskId) => {
 
   const poll = async () => {
     try {
-      const response = await axios.get(`/api/ai-science/image-result/${taskId}`)
-      
+      const response = await axios.get(`${API_BASE}/image-result/${taskId}`)
+
       if (response.data.success && response.data.data.status === 'completed') {
         paintingResult.value = {
           imageUrl: response.data.data.images[0].url
@@ -473,9 +461,7 @@ ${posterForm.info}
 4. 字体建议
 5. 视觉元素建议`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       posterResult.value = response.data.data.reply
@@ -509,9 +495,7 @@ ${mindmapForm.content}
 
 请以树状结构输出，使用缩进表示层级关系。`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       mindmapResult.value = response.data.data.reply
@@ -544,9 +528,7 @@ ${pptForm.content}
 2. 每页的核心内容要点
 3. 演讲建议`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       pptResult.value = response.data.data.reply
@@ -603,15 +585,15 @@ const clearPPT = () => {
 
 const formatResult = (text) => {
   return text
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
 }
 
 const formatMindmap = (text) => {
   return text
-    .replace(/\n/g, '<br>')
-    .replace(/^(\s+)/gm, (match) => '&nbsp;'.repeat(match.length * 2))
+      .replace(/\n/g, '<br>')
+      .replace(/^(\s+)/gm, (match) => '&nbsp;'.repeat(match.length * 2))
 }
 
 const copyResult = (text) => {
@@ -648,81 +630,12 @@ const exportPPT = () => {
 </script>
 
 <style scoped>
-.ai-creative-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-  padding: 20px;
+.ai-creative {
+  width: 100%;
 }
 
-.page-header {
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
+.creative-tabs :deep(.el-tabs__header) {
   margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.header-icon {
-  font-size: 48px;
-  color: #fa709a;
-}
-
-.header-left h1 {
-  margin: 0;
-  font-size: 28px;
-  color: #303133;
-}
-
-.header-left p {
-  margin: 5px 0 0 0;
-  color: #909399;
-  font-size: 14px;
-}
-
-.header-stats {
-  display: flex;
-  gap: 30px;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-value {
-  display: block;
-  font-size: 24px;
-  font-weight: 600;
-  color: #fa709a;
-}
-
-.stat-label {
-  display: block;
-  font-size: 12px;
-  color: #909399;
-  margin-top: 5px;
-}
-
-.page-content {
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.ai-tabs {
-  min-height: 600px;
 }
 
 .tab-content {
@@ -795,7 +708,6 @@ const exportPPT = () => {
   margin: 0;
   font-size: 18px;
   color: #303133;
-  flex: 1;
 }
 
 .painting-display {
@@ -827,10 +739,6 @@ const exportPPT = () => {
 .mindmap-content {
   font-family: monospace;
   white-space: pre-wrap;
-}
-
-.ppt-content {
-  line-height: 2;
 }
 
 .result-actions {

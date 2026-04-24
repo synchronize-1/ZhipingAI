@@ -24,8 +24,8 @@ router.post('/login', async (req, res) => {
     
     const token = generateToken(user);
     
-    // 特殊处理：将student001的用户名改为"原神大王"
-    const displayName = user.username === 'student001' ? '原神大王' : user.name;
+    // 特殊处理：将student001的用户名改为"christie"
+    const displayName = user.username === 'student001' ? 'christie' : user.name;
     
     res.json({
       success: true,
@@ -84,10 +84,9 @@ router.get('/me', verifyToken, async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: '用户不存在' });
     }
-    
-    // 特殊处理：将student001的用户名改为"原神大王"
+
     if (user.username === 'student001') {
-      user.name = '原神大王';
+      user.name = 'christie';
     }
     
     res.json({ success: true, data: user });

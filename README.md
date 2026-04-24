@@ -1,8 +1,7 @@
-# 🎓 SmartCampus - 智界·灵动校园
+# 🎓 智评AI
 
 <div align="center">
 
-**智能校园数字化平台 - 面向未来教育的智慧校园解决方案**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
@@ -10,7 +9,7 @@
 [![MySQL Version](https://img.shields.io/badge/mysql-8.0%2B-blue)](https://www.mysql.com/)
 [![Express Version](https://img.shields.io/badge/express-4.18%2B-lightgrey)](https://expressjs.com/)
 
-[功能特性](#-功能特性) • [技术栈](#️-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [文档](#-文档) • [截图预览](#-截图预览)
+[功能特性](#-功能特性) • [技术栈](#️-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [文档](#-文档)
 
 </div>
 
@@ -186,7 +185,7 @@
 
 ---
 
-## 📁 项目结构
+## 📁 项目结构（待更新）
 
 ```
 SmartCampus/
@@ -338,7 +337,7 @@ npm run init:db
 
 成功后会显示：
 ```
-✅ 数据库初始化成功！
+✅ 数据库初始化成功！（暂时只开发了管理员端口，融合了学生端的部分内容）
 ✅ 已创建测试账号：
    管理员: admin / admin123
    教师: teacher1 / teacher123
@@ -409,33 +408,13 @@ npm run dev:h5
 
 ## 📚 文档
 
-- 📖 **[使用教程](./docs/使用教程.md)** - 详细的安装配置、功能使用和操作指南
+- 📖 **[三端交互流程](docs/三端交互流程.md)** - 管理员、教师、学生交互流程
 - 🔧 **[项目技术文档](./docs/项目技术文档.md)** - 完整的技术架构、API文档和开发指南
 
----
-
-## 🎨 截图预览
-
-### Web管理后台
-- 数据可视化大屏
-- 用户管理界面
-- 课表管理系统
-- AI功能模块
-
-### 移动端应用
-- 智能课表
-- 空闲教室查询
-- 校园导航
-- AI助手
-
-> 截图待补充...
-
----
 
 ## 🤝 贡献指南
 
 欢迎贡献代码！请遵循以下步骤：
-
 1. Fork 本仓库
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
 3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
@@ -465,13 +444,7 @@ npm run dev:h5
 
 ## 📝 开发计划
 
-- [ ] 移动端完整功能开发
-- [ ] 更多AI功能集成
-- [ ] 性能优化
-- [ ] 单元测试覆盖
-- [ ] Docker部署支持
-- [ ] 国际化支持
-
+- ……
 ---
 
 ## ❓ 常见问题
@@ -524,21 +497,11 @@ kill -9 <进程号>
 - [DeepSeek](https://www.deepseek.com/)
 - [Umi-OCR](https://github.com/hiroi-sora/Umi-OCR)
 
----
-
-## 📧 联系方式
-
-- 项目地址: [https://github.com/yourusername/SmartCampus](https://github.com/yourusername/SmartCampus)
-- 问题反馈: [Issues](https://github.com/yourusername/SmartCampus/issues)
-
----
 
 <div align="center">
 
-**🎓 SmartCampus - 让校园生活更智能、更便捷、更美好！**
-
 如果这个项目对你有帮助，请给个 ⭐️ Star 支持一下！
 
-Made with ❤️ by SmartCampus Team
+Made with ❤️ by synduality
 
 </div>

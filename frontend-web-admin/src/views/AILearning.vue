@@ -1,23 +1,7 @@
 <template>
-  <div class="ai-learning-page">
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-left">
-          <el-icon class="header-icon"><Reading /></el-icon>
-          <div>
-            <h1>AI学习助手</h1>
-            <p>让AI成为你的专属学习伙伴</p>
-          </div>
-        </div>
-        <el-button type="primary" @click="showTutorial = true">
-          <el-icon><QuestionFilled /></el-icon>
-          使用教程
-        </el-button>
-      </div>
-    </div>
-
+  <div class="ai-learning">
     <div class="page-content">
-      <el-tabs v-model="activeTab" class="ai-tabs">
+      <el-tabs v-model="activeTab" class="learning-tabs">
         <!-- 作业辅导 -->
         <el-tab-pane label="作业辅导" name="homework">
           <div class="tab-content">
@@ -27,7 +11,7 @@
                 <h3>AI作业辅导</h3>
                 <p>上传作业题目，AI为你提供详细解题思路</p>
               </div>
-              
+
               <el-form :model="homeworkForm" label-width="100px" class="ai-form">
                 <el-form-item label="学科">
                   <el-select v-model="homeworkForm.subject" placeholder="请选择学科">
@@ -56,22 +40,22 @@
 
                 <el-form-item label="题目内容">
                   <el-input
-                    v-model="homeworkForm.question"
-                    type="textarea"
-                    :rows="6"
-                    placeholder="请输入题目内容，可以包含题目、选项、已知条件等信息"
-                    maxlength="2000"
-                    show-word-limit
+                      v-model="homeworkForm.question"
+                      type="textarea"
+                      :rows="6"
+                      placeholder="请输入题目内容，可以包含题目、选项、已知条件等信息"
+                      maxlength="2000"
+                      show-word-limit
                   />
                 </el-form-item>
 
                 <el-form-item label="图片上传">
                   <el-upload
-                    class="upload-demo"
-                    drag
-                    :auto-upload="false"
-                    :on-change="handleImageUpload"
-                    accept="image/*"
+                      class="upload-demo"
+                      drag
+                      :auto-upload="false"
+                      :on-change="handleImageUpload"
+                      accept="image/*"
                   >
                     <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
                     <div class="el-upload__text">
@@ -84,12 +68,12 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="getHomeworkHelp"
-                    :loading="homeworkLoading"
-                    :disabled="!homeworkForm.question.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="getHomeworkHelp"
+                      :loading="homeworkLoading"
+                      :disabled="!homeworkForm.question.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI帮我解答
@@ -146,10 +130,10 @@
 
                 <el-form-item label="知识点">
                   <el-input
-                    v-model="knowledgeForm.topic"
-                    placeholder="例如：二次函数、牛顿第一定律、光合作用等"
-                    maxlength="100"
-                    show-word-limit
+                      v-model="knowledgeForm.topic"
+                      placeholder="例如：二次函数、牛顿第一定律、光合作用等"
+                      maxlength="100"
+                      show-word-limit
                   />
                 </el-form-item>
 
@@ -163,20 +147,20 @@
 
                 <el-form-item label="补充说明">
                   <el-input
-                    v-model="knowledgeForm.notes"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="可以补充你想了解的具体方面，例如：重点讲解应用场景、多举几个例子等"
+                      v-model="knowledgeForm.notes"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="可以补充你想了解的具体方面，例如：重点讲解应用场景、多举几个例子等"
                   />
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="getKnowledgeExplain"
-                    :loading="knowledgeLoading"
-                    :disabled="!knowledgeForm.topic.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="getKnowledgeExplain"
+                      :loading="knowledgeLoading"
+                      :disabled="!knowledgeForm.topic.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI开始讲解
@@ -219,9 +203,9 @@
               <el-form :model="planForm" label-width="120px" class="ai-form">
                 <el-form-item label="学习目标">
                   <el-input
-                    v-model="planForm.goal"
-                    placeholder="例如：期末考试提高20分、掌握高等数学基础知识等"
-                    maxlength="100"
+                      v-model="planForm.goal"
+                      placeholder="例如：期末考试提高20分、掌握高等数学基础知识等"
+                      maxlength="100"
                   />
                 </el-form-item>
 
@@ -235,13 +219,13 @@
                 </el-form-item>
 
                 <el-form-item label="每天学习时间">
-                  <el-slider 
-                    v-model="planForm.dailyHours" 
-                    :min="1" 
-                    :max="8" 
-                    :step="0.5"
-                    show-stops
-                    :format-tooltip="(val) => `${val}小时`"
+                  <el-slider
+                      v-model="planForm.dailyHours"
+                      :min="1"
+                      :max="8"
+                      :step="0.5"
+                      show-stops
+                      :format-tooltip="(val) => `${val}小时`"
                   />
                   <span class="slider-value">{{ planForm.dailyHours }}小时/天</span>
                 </el-form-item>
@@ -267,20 +251,20 @@
 
                 <el-form-item label="补充说明">
                   <el-input
-                    v-model="planForm.notes"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="可以补充你的具体情况，例如：某些时间段不方便学习、有特殊要求等"
+                      v-model="planForm.notes"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="可以补充你的具体情况，例如：某些时间段不方便学习、有特殊要求等"
                   />
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generateStudyPlan"
-                    :loading="planLoading"
-                    :disabled="!planForm.goal.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generateStudyPlan"
+                      :loading="planLoading"
+                      :disabled="!planForm.goal.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI生成计划
@@ -337,38 +321,38 @@
 
                 <el-form-item label="题目内容">
                   <el-input
-                    v-model="errorForm.question"
-                    type="textarea"
-                    :rows="4"
-                    placeholder="请输入题目内容"
+                      v-model="errorForm.question"
+                      type="textarea"
+                      :rows="4"
+                      placeholder="请输入题目内容"
                   />
                 </el-form-item>
 
                 <el-form-item label="你的答案">
                   <el-input
-                    v-model="errorForm.myAnswer"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="请输入你的答案或解题过程"
+                      v-model="errorForm.myAnswer"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="请输入你的答案或解题过程"
                   />
                 </el-form-item>
 
                 <el-form-item label="正确答案">
                   <el-input
-                    v-model="errorForm.correctAnswer"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="请输入正确答案（如果知道的话）"
+                      v-model="errorForm.correctAnswer"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="请输入正确答案（如果知道的话）"
                   />
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="analyzeError"
-                    :loading="errorLoading"
-                    :disabled="!errorForm.question.trim() || !errorForm.myAnswer.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="analyzeError"
+                      :loading="errorLoading"
+                      :disabled="!errorForm.question.trim() || !errorForm.myAnswer.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI分析错题
@@ -399,36 +383,22 @@
         </el-tab-pane>
       </el-tabs>
     </div>
-
-    <!-- 使用教程对话框 -->
-    <el-dialog v-model="showTutorial" title="AI学习助手使用教程" width="600px">
-      <div class="tutorial-content">
-        <el-timeline>
-          <el-timeline-item timestamp="作业辅导" placement="top">
-            <p>上传作业题目，AI会提供详细的解题思路和步骤讲解</p>
-          </el-timeline-item>
-          <el-timeline-item timestamp="知识讲解" placement="top">
-            <p>输入知识点名称，AI会生成通俗易懂的讲解内容</p>
-          </el-timeline-item>
-          <el-timeline-item timestamp="学习计划" placement="top">
-            <p>告诉AI你的学习目标，AI会为你制定个性化学习计划</p>
-          </el-timeline-item>
-          <el-timeline-item timestamp="错题分析" placement="top">
-            <p>上传错题和你的答案，AI会分析错误原因并提供改进建议</p>
-          </el-timeline-item>
-        </el-timeline>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
+import {
+  EditPen, Reading, Calendar, Warning, MagicStick,
+  UploadFilled, CircleCheck, DocumentCopy, ChatDotRound,
+  FolderAdd, Download, Share, Connection
+} from '@element-plus/icons-vue'
 import axios from 'axios'
 
+const API_BASE = 'http://localhost:3000/api/ai-science'
+
 const activeTab = ref('homework')
-const showTutorial = ref(false)
 
 const homeworkForm = reactive({
   subject: '',
@@ -477,10 +447,9 @@ const getHomeworkHelp = async () => {
   try {
     let questionText = homeworkForm.question
 
-    // 如果上传了图片，先进行OCR识别
     if (homeworkForm.image) {
       ElMessage.info('正在识别图片中的文字...')
-      
+
       const reader = new FileReader()
       const base64 = await new Promise((resolve) => {
         reader.readAsDataURL(homeworkForm.image)
@@ -489,13 +458,12 @@ const getHomeworkHelp = async () => {
         }
       })
 
-      const ocrResponse = await axios.post('/api/ai-science/ocr', {
-        image: base64
+      const ocrResponse = await axios.post(`${API_BASE}/ocr`, {
+        imageBase64: base64
       })
 
       if (ocrResponse.data.success) {
         const ocrText = ocrResponse.data.data.text
-        // 将OCR识别的文字添加到题目内容中
         if (questionText.trim()) {
           questionText = `${questionText}\n\n图片中的内容：\n${ocrText}`
         } else {
@@ -517,9 +485,7 @@ const getHomeworkHelp = async () => {
 3. 相关知识点讲解
 4. 易错点提醒`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       homeworkResult.value = response.data.data.reply
@@ -547,9 +513,7 @@ const getKnowledgeExplain = async () => {
 - 总结重点和难点
 ${knowledgeForm.notes ? `\n补充要求：${knowledgeForm.notes}` : ''}`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       knowledgeResult.value = response.data.data.reply
@@ -583,9 +547,7 @@ ${planForm.notes ? `补充说明：${planForm.notes}` : ''}
 3. 阶段性目标和检验方法
 4. 学习建议和注意事项`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       planResult.value = response.data.data.reply
@@ -618,9 +580,7 @@ ${errorForm.correctAnswer ? `正确答案：${errorForm.correctAnswer}` : ''}
 4. 避免类似错误的建议
 5. 推荐相似题型练习`
 
-    const response = await axios.post('/api/ai-science/chat', {
-      message: prompt
-    })
+    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
 
     if (response.data.success) {
       errorResult.value = response.data.data.reply
@@ -680,10 +640,10 @@ const clearError = () => {
 
 const formatResult = (text) => {
   return text
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
-    .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>')
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
+      .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>')
 }
 
 const copyResult = (text) => {
@@ -717,58 +677,12 @@ const getSimilarQuestions = () => {
 </script>
 
 <style scoped>
-.ai-learning-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+.ai-learning {
+  width: 100%;
 }
 
-.page-header {
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
+.learning-tabs :deep(.el-tabs__header) {
   margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.header-icon {
-  font-size: 48px;
-  color: #667eea;
-}
-
-.header-left h1 {
-  margin: 0;
-  font-size: 28px;
-  color: #303133;
-}
-
-.header-left p {
-  margin: 5px 0 0 0;
-  color: #909399;
-  font-size: 14px;
-}
-
-.page-content {
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.ai-tabs {
-  min-height: 600px;
 }
 
 .tab-content {
@@ -870,10 +784,6 @@ const getSimilarQuestions = () => {
   display: flex;
   gap: 10px;
   justify-content: center;
-}
-
-.tutorial-content {
-  padding: 20px;
 }
 
 .upload-demo {

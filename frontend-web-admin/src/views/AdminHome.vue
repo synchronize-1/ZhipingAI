@@ -79,10 +79,10 @@
             </el-tag>
           </div>
           <div class="metric-value">{{ pendingServices }}</div>
-          <div class="metric-label">待处理工单</div>
+          <div class="metric-label">xxxxx</div>
           <div class="metric-detail">
-            <span>报修 {{ repairCount }}</span>
-            <span>预约 {{ bookingCount }}</span>
+            <span>xx {{ repairCount }}</span>
+            <span>xx {{ bookingCount }}</span>
           </div>
         </div>
       </div>
@@ -303,7 +303,6 @@
               </div>
               <div class="manage-info">
                 <span class="manage-name">{{ item.name }}</span>
-                <span class="manage-count">{{ item.count }}</span>
               </div>
             </div>
           </div>
@@ -317,14 +316,10 @@
                 <el-icon><Document /></el-icon>
               </div>
               <div>
-                <h3>操作日志</h3>
-                <p>最近系统操作记录</p>
+                <h3>xxxx</h3>
+                <p>xxxxxxx</p>
               </div>
             </div>
-            <el-button type="primary" text size="small" @click="viewAllLogs">
-              查看全部
-              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
-            </el-button>
           </div>
           <div class="logs-list">
             <div v-for="log in recentLogs" :key="log.id" class="log-item">
@@ -333,7 +328,6 @@
                 <span class="log-action">
                   <strong>{{ log.operator }}</strong> {{ log.action }}
                 </span>
-                <span class="log-time">{{ log.time }}</span>
               </div>
             </div>
           </div>
@@ -385,8 +379,8 @@ const systemLoad = ref(42)
 const onlineUsers = ref(3456)
 
 const pendingServices = ref(18)
-const repairCount = ref(12)
-const bookingCount = ref(6)
+const repairCount = ref(100000)
+const bookingCount = ref(100000)
 
 // 图表时间范围
 const chartTimeRange = ref('today')
@@ -431,12 +425,12 @@ const alerts = ref([
 
 // 快捷管理 - 使用图标名称
 const quickManage = ref([
-  { name: '用户管理', iconName: 'User', path: '/users', count: '12,580', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
-  { name: '课程管理', iconName: 'Reading', path: '/courses', count: '156', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
-  { name: '教室管理', iconName: 'OfficeBuilding', path: '/rooms', count: '89', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { name: '安全监控', iconName: 'Lock', path: '/security', count: '正常', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-  { name: '通知发布', iconName: 'Bell', path: '/notifications', count: '发布', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
-  { name: '系统设置', iconName: 'Setting', path: '/profile', count: '配置', gradient: 'linear-gradient(135deg, #a8edea, #fed6e3)' }
+  { name: '用户管理', iconName: 'User', path: '/users', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
+  { name: '课程管理', iconName: 'Reading', path: '/courses', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
+  { name: '课表管理', iconName: 'OfficeBuilding', path: '/rooms', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
+  { name: 'AI健康评估', iconName: 'Lock', path: '/admin-health', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+  { name: '通知中心', iconName: 'Bell', path: '/notifications', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
+  { name: '系统设置', iconName: 'Setting', path: '/profile', gradient: 'linear-gradient(135deg, #a8edea, #fed6e3)' }
 ])
 
 // 操作日志
@@ -468,9 +462,6 @@ const navigateTo = (path) => {
   router.push(path)
 }
 
-const viewAllLogs = () => {
-  router.push('/security?tab=logs')
-}
 
 const updateMainChart = () => {
   if (!mainChartRef.value) return

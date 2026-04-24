@@ -304,7 +304,7 @@ const exportToPDF = () => {
     </head>
     <body>
       <h1>📅 ${studentName}课表</h1>
-      <div class="info">第 ${currentWeek.value} 周 | 智界·灵动校园</div>
+      <div class="info">第 ${currentWeek.value} 周 | 智评AI</div>
       <table>
         <thead>
           <tr>
@@ -328,8 +328,8 @@ const exportToPDF = () => {
         courses.forEach(c => {
           htmlContent += `<div class="course">
             <div class="course-name">${c.course_name}</div>
-            <div class="course-info">📍${c.room_name}</div>
-            <div class="course-info">👨‍🏫${c.teacher_name}</div>
+            <div class="course-info">${c.room_name}</div>
+            <div class="course-info">${c.teacher_name}</div>
           </div>`
         })
         htmlContent += '</td>'
@@ -365,7 +365,6 @@ const exportToPDF = () => {
 }
 
 const fetchSchedule = async () => {
-  // 原神大王（student001）的课表数据
   const student001Schedule = [
     // 周一
     { id: 1, course_id: 1, course_name: '数据结构与算法', teacher_name: '陈教授', room_name: '教A-301', day_of_week: 1, slot: 1 },

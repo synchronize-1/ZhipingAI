@@ -1,74 +1,12 @@
 <template>
   <div class="space-y-6">
     <el-tabs v-model="activeTab" class="custom-tabs">
-      <!-- 报修服务 -->
-      <el-tab-pane label="报修服务" name="repair">
-        <!-- 管理员视图：报修记录管理 -->
-        <div v-if="isAdmin" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-4">
-              <h3 class="text-lg font-semibold">📋 报修记录管理</h3>
-              <el-select v-model="repairStatusFilter" placeholder="状态筛选" class="w-32" clearable>
-                <el-option label="全部" value="" />
-                <el-option label="待处理" value="pending" />
-                <el-option label="处理中" value="processing" />
-                <el-option label="已完成" value="completed" />
-              </el-select>
-            </div>
-            <div class="text-sm text-gray-500">
-              共 <span class="text-blue-500 font-bold">{{ repairRecords.length }}</span> 条报修记录
-            </div>
-          </div>
-          <el-table :data="filteredRepairRecords" stripe style="width: 100%" class="rounded-xl overflow-hidden">
-            <el-table-column prop="id" label="工单号" width="100" />
-            <el-table-column prop="title" label="报修标题" min-width="150" />
-            <el-table-column prop="category" label="类别" width="100">
-              <template #default="{ row }">
-                <el-tag size="small" :type="getRepairCategoryType(row.category)">{{ row.category }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="location" label="位置" min-width="120" />
-            <el-table-column prop="reporter" label="报修人" width="100" />
-            <el-table-column prop="reportTime" label="报修时间" width="160" />
-            <el-table-column prop="status" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="getRepairStatusType(row.status)" size="small">{{ getRepairStatusText(row.status) }}</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" type="primary" @click="handleRepair(row)">处理</el-button>
-                <el-button size="small" type="success" @click="completeRepair(row)" :disabled="row.status === 'completed'">完成</el-button>
-                <el-button size="small" type="info" @click="viewRepairDetail(row)">详情</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-        <!-- 学生视图：提交报修 -->
-        <div v-else>
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-            <el-button type="primary" :icon="Plus" @click="showRepairDialog = true">提交报修</el-button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div v-for="repair in repairs" :key="repair.id" 
-                 class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-              <div class="flex items-center justify-between mb-2">
-                <h4 class="font-medium">{{ repair.title }}</h4>
-                <el-tag :type="getRepairStatusType(repair.status)" size="small">{{ getRepairStatusText(repair.status) }}</el-tag>
-              </div>
-              <p class="text-sm text-gray-600 mb-2">{{ repair.description }}</p>
-              <p class="text-xs text-gray-500">📍 {{ repair.location }}</p>
-            </div>
-          </div>
-        </div>
-      </el-tab-pane>
-
       <!-- 图书借阅 -->
       <el-tab-pane label="图书借阅" name="book">
         <!-- 管理员视图：图书借阅记录 -->
         <div v-if="isAdmin" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold">📚 图书借阅记录管理</h3>
+            <h3 class="text-lg font-semibold">📚 图书借阅记录</h3>
             <div class="text-sm text-gray-500">
               共 <span class="text-blue-500 font-bold">{{ bookBorrowRecords.length }}</span> 条借阅记录
             </div>
@@ -330,131 +268,6 @@
         </div>
       </el-tab-pane>
     </el-tabs>
-
-    <!-- 报修对话框 -->
-    <el-dialog v-model="showRepairDialog" title="提交报修" width="500px">
-      <el-form :model="repairForm" label-width="80px">
-        <el-form-item label="标题"><el-input v-model="repairForm.title" placeholder="请简要描述问题" /></el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="repairForm.category" class="w-full">
-            <el-option label="电器故障" value="electrical" />
-            <el-option label="水管问题" value="plumbing" />
-            <el-option label="家具损坏" value="furniture" />
-            <el-option label="网络故障" value="network" />
-            <el-option label="门窗问题" value="door" />
-            <el-option label="空调维修" value="ac" />
-            <el-option label="其他" value="other" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="位置">
-          <el-cascader 
-            v-model="repairForm.locationPath" 
-            :options="locationOptions" 
-            class="w-full"
-            placeholder="请选择位置"
-            :props="{ expandTrigger: 'hover' }"
-            @change="handleLocationChange"
-          />
-        </el-form-item>
-        <el-form-item label="详细地址">
-          <el-input v-model="repairForm.location" placeholder="如：3层走廊尽头" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="repairForm.description" type="textarea" :rows="3" placeholder="请详细描述问题情况" />
-        </el-form-item>
-        <el-form-item label="上传图片">
-          <el-upload action="#" list-type="picture-card" :auto-upload="false" :limit="3">
-            <el-icon><Plus /></el-icon>
-          </el-upload>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showRepairDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitRepair">提交</el-button>
-      </template>
-    </el-dialog>
-    
-    <!-- 报修详情对话框 -->
-    <el-dialog v-model="showRepairDetailDialog" title="📋 报修工单详情" width="600px">
-      <div v-if="selectedRepair" class="space-y-4">
-        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-bold text-gray-800">{{ selectedRepair.title }}</h3>
-            <el-tag :type="getRepairStatusType(selectedRepair.status)" size="large">
-              {{ getRepairStatusText(selectedRepair.status) }}
-            </el-tag>
-          </div>
-          <div class="text-sm text-gray-600">
-            <p class="mb-1">工单号：<span class="font-mono font-semibold">{{ selectedRepair.id }}</span></p>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-white rounded-lg p-4 border border-gray-200">
-            <p class="text-xs text-gray-500 mb-1">报修类别</p>
-            <el-tag :type="getRepairCategoryType(selectedRepair.category)" size="large">
-              {{ selectedRepair.category }}
-            </el-tag>
-          </div>
-          <div class="bg-white rounded-lg p-4 border border-gray-200">
-            <p class="text-xs text-gray-500 mb-1">报修人</p>
-            <p class="font-semibold text-gray-800">{{ selectedRepair.reporter }}</p>
-          </div>
-        </div>
-        
-        <div class="bg-white rounded-lg p-4 border border-gray-200">
-          <p class="text-xs text-gray-500 mb-2">报修位置</p>
-          <p class="font-semibold text-gray-800 flex items-center gap-2">
-            <span>📍</span>{{ selectedRepair.location }}
-          </p>
-        </div>
-        
-        <div class="bg-white rounded-lg p-4 border border-gray-200">
-          <p class="text-xs text-gray-500 mb-2">报修时间</p>
-          <p class="font-semibold text-gray-800 flex items-center gap-2">
-            <span>🕐</span>{{ selectedRepair.reportTime }}
-          </p>
-        </div>
-        
-        <div class="bg-white rounded-lg p-4 border border-gray-200">
-          <p class="text-xs text-gray-500 mb-2">问题描述</p>
-          <p class="text-gray-700 leading-relaxed">{{ selectedRepair.description }}</p>
-        </div>
-        
-        <div v-if="selectedRepair.status === 'processing' || selectedRepair.status === 'completed'" 
-             class="bg-green-50 rounded-lg p-4 border border-green-200">
-          <p class="text-xs text-green-600 mb-2">处理进度</p>
-          <div class="space-y-2">
-            <div class="flex items-center gap-2 text-sm">
-              <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-              <span class="text-gray-700">工单已接收</span>
-              <span class="text-xs text-gray-500 ml-auto">{{ selectedRepair.reportTime }}</span>
-            </div>
-            <div v-if="selectedRepair.status === 'processing' || selectedRepair.status === 'completed'" 
-                 class="flex items-center gap-2 text-sm">
-              <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-              <span class="text-gray-700">维修人员已派遣</span>
-              <span class="text-xs text-gray-500 ml-auto">处理中</span>
-            </div>
-            <div v-if="selectedRepair.status === 'completed'" 
-                 class="flex items-center gap-2 text-sm">
-              <span class="w-2 h-2 bg-green-500 rounded-full"></span>
-              <span class="text-gray-700">维修已完成</span>
-              <span class="text-xs text-gray-500 ml-auto">已完成</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="showRepairDetailDialog = false">关闭</el-button>
-        <el-button v-if="selectedRepair?.status === 'pending'" type="primary" @click="handleRepair(selectedRepair); showRepairDetailDialog = false">
-          开始处理
-        </el-button>
-        <el-button v-if="selectedRepair?.status === 'processing'" type="success" @click="completeRepair(selectedRepair); showRepairDetailDialog = false">
-          标记完成
-        </el-button>
-      </template>
-    </el-dialog>
     
     <!-- 图书详情对话框 -->
     <el-dialog v-model="showBookDialog" :title="selectedBook?.title" width="700px">
@@ -640,8 +453,8 @@
           </el-form-item>
         </el-form>
         <div class="text-sm text-gray-500 mt-4">
-          <p>📍 领取地点：{{ selectedEquipment.location }}</p>
-          <p>⏰ 可用时间：{{ selectedEquipment.availableTime }}</p>
+          <p> 领取地点：{{ selectedEquipment.location }}</p>
+          <p> 可用时间：{{ selectedEquipment.availableTime }}</p>
         </div>
       </div>
       <template #footer>
@@ -656,7 +469,7 @@
         <div class="receipt-header">
           <div class="receipt-logo">🍽️</div>
           <h2>{{ orderReceipt.canteenName }}</h2>
-          <p class="receipt-subtitle">智界·灵动校园</p>
+          <p class="receipt-subtitle">智评AI-学生服务</p>
         </div>
         
         <div class="receipt-divider">- - - - - - - - - - - - - - - - - -</div>
@@ -823,105 +636,11 @@ const rejectReservation = (row) => {
 }
 
 const activeTab = ref('repair')
-const repairs = ref([])
-const repairStatusFilter = ref('')
-
-// 默认报修记录数据
-const defaultRepairRecords = [
-  { id: '#2024001', title: '教室空调故障', category: '电器', location: '教学楼A-301', reporter: '李明轩', reportTime: '2026-01-10 09:30', status: 'pending', description: '空调无法制热，室内温度过低', submitterId: 6 },
-  { id: '#2024002', title: '宿舍热水器不工作', category: '水电', location: '3号楼201室', reporter: '张雨晴', reportTime: '2026-01-10 14:22', status: 'processing', description: '热水器无法加热，已报修2天', submitterId: 7 },
-  { id: '#2024003', title: '实验室电脑蓝屏', category: '电脑', location: '计算机实验室A-302', reporter: '陈伟杰', reportTime: '2026-01-09 16:45', status: 'completed', description: '开机后频繁蓝屏，无法正常使用', submitterId: 8 },
-  { id: '#2024004', title: '图书馆灯管闪烁', category: '电器', location: '图书馆3楼阅览室', reporter: '林思琪', reportTime: '2026-01-09 11:20', status: 'completed', description: '靠窗位置灯管闪烁严重，影响阅读', submitterId: 9 },
-  { id: '#2024005', title: '食堂水龙头漏水', category: '水电', location: '第一食堂2楼', reporter: '黄俊豪', reportTime: '2026-01-11 08:15', status: 'pending', description: '水龙头关不紧，一直在滴水', submitterId: 10 },
-  { id: '#2024006', title: '体育馆门锁损坏', category: '其他', location: '体育馆B区更衣室', reporter: '吴雪梅', reportTime: '2026-01-11 10:30', status: 'pending', description: '门锁无法正常锁闭，存在安全隐患', submitterId: 11 },
-  { id: '#2024007', title: '多媒体教室投影仪模糊', category: '电器', location: '教学楼B-205', reporter: '周子轩', reportTime: '2026-01-08 15:00', status: 'processing', description: '投影画面模糊，影响教学', submitterId: 12 }
-]
-
-// 从localStorage加载共享的报修记录
-const loadSharedRepairRecords = () => {
-  const saved = localStorage.getItem('sharedRepairRecords')
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved)
-      return [...parsed, ...defaultRepairRecords]
-    } catch (e) {
-      return defaultRepairRecords
-    }
-  }
-  return defaultRepairRecords
-}
-
-// 保存报修记录到localStorage
-const saveSharedRepairRecord = (record) => {
-  const saved = localStorage.getItem('sharedRepairRecords')
-  let records = []
-  if (saved) {
-    try {
-      records = JSON.parse(saved)
-    } catch (e) {
-      records = []
-    }
-  }
-  records.unshift(record)
-  localStorage.setItem('sharedRepairRecords', JSON.stringify(records))
-}
-
-// 管理员报修记录数据 - 从localStorage加载
-const repairRecords = ref(loadSharedRepairRecords())
-
-const filteredRepairRecords = computed(() => {
-  if (!repairStatusFilter.value) return repairRecords.value
-  return repairRecords.value.filter(r => r.status === repairStatusFilter.value)
-})
-
-const getRepairCategoryType = (category) => {
-  const types = { '电器': 'warning', '水电': 'primary', '电脑': 'success', '其他': 'info' }
-  return types[category] || 'info'
-}
-
-const handleRepair = (row) => {
-  row.status = 'processing'
-  ElMessage.success(`工单 ${row.id} 已开始处理`)
-  
-  // 通过WebSocket通知报修提交者
-  if (row.submitterId) {
-    socketStore.updateRepairStatus(row.id, 'processing', '维修人员已派遣，正在处理中', row.submitterId)
-  }
-}
-
-const completeRepair = (row) => {
-  row.status = 'completed'
-  ElMessage.success(`工单 ${row.id} 已完成`)
-  
-  // 通过WebSocket通知报修提交者
-  if (row.submitterId) {
-    socketStore.updateRepairStatus(row.id, 'completed', '报修已处理完成，感谢您的耐心等待', row.submitterId)
-  }
-  
-  // 添加完成通知到通知中心
-  const userName = userStore.user?.name || '未知用户'
-  socketStore.addLocalNotification({
-    type: 'repair',
-    title: '报修工单已完成',
-    content: `您的报修「${row.title}」已完成处理，感谢您的耐心等待`,
-    time: new Date().toISOString(),
-    targetRole: 'student',
-    sourceUserName: userName
-  })
-}
-
-const viewRepairDetail = (row) => {
-  selectedRepair.value = row
-  showRepairDetailDialog.value = true
-}
 const books = ref([])
 const bookSearch = ref('')
 const bookCategory = ref('')
 const canteens = ref([])
 const equipments = ref([])
-const showRepairDialog = ref(false)
-const showRepairDetailDialog = ref(false)
-const selectedRepair = ref(null)
 const showBookDialog = ref(false)
 const showCanteenDialog = ref(false)
 const showCartDialog = ref(false)
@@ -1166,17 +885,10 @@ const recommendedDishes = computed(() => {
   return allRecommendedDishes[selectedCanteen.value?.id] || allRecommendedDishes[1]
 })
 
-const getRepairStatusType = (s) => ({ pending: 'warning', processing: 'primary', completed: 'success', cancelled: 'info' }[s] || 'info')
-const getRepairStatusText = (s) => ({ pending: '待处理', processing: '处理中', completed: '已完成', cancelled: '已取消' }[s] || s)
 const getCrowdType = (l) => l < 40 ? 'success' : l < 70 ? 'warning' : 'danger'
 const getCrowdText = (l) => l < 40 ? '空闲' : l < 70 ? '适中' : '拥挤'
 const getCrowdColor = (l) => l < 40 ? '#10b981' : l < 70 ? '#f59e0b' : '#ef4444'
 
-const handleLocationChange = (value) => {
-  if (value && value.length > 0) {
-    repairForm.value.location = value.join(' - ')
-  }
-}
 
 const handleBookCoverError = (e) => {
   e.target.src = 'https://via.placeholder.com/200x280?text=Book'
@@ -1452,103 +1164,6 @@ const borrowBook = async (book) => {
   })
 }
 
-const submitRepair = async () => {
-  if (!repairForm.value.title) {
-    ElMessage.warning('请填写报修标题')
-    return
-  }
-  if (!repairForm.value.location) {
-    ElMessage.warning('请选择报修位置')
-    return
-  }
-  
-  const userName = userStore.user?.name || '未知用户'
-  const userRole = userStore.user?.role || 'student'
-  const userId = userStore.user?.id || Date.now()
-  
-  // 类别映射
-  const categoryMap = {
-    'electrical': '电器',
-    'plumbing': '水电',
-    'furniture': '家具',
-    'network': '网络',
-    'door': '门窗',
-    'ac': '空调',
-    'other': '其他'
-  }
-  
-  // 添加到本地列表
-  const newRepair = {
-    id: Date.now(),
-    title: repairForm.value.title,
-    description: repairForm.value.description || '无详细描述',
-    location: repairForm.value.location,
-    category: repairForm.value.category,
-    status: 'pending',
-    created_at: new Date().toISOString()
-  }
-  
-  // 创建管理员视图的报修记录格式
-  const adminRepairRecord = {
-    id: `#${Date.now()}`,
-    title: repairForm.value.title,
-    category: categoryMap[repairForm.value.category] || '其他',
-    location: repairForm.value.location,
-    reporter: userName,
-    reportTime: new Date().toLocaleString('zh-CN', { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    }).replace(/\//g, '-'),
-    status: 'pending',
-    description: repairForm.value.description || '无详细描述',
-    submitterId: userId
-  }
-  
-  // 保存到localStorage，让管理员能看到
-  saveSharedRepairRecord(adminRepairRecord)
-  
-  // 添加到当前列表（学生视图）
-  repairs.value.unshift(newRepair)
-  
-  try { 
-    await api.services.createRepair(repairForm.value)
-  } catch (e) { 
-    // API失败也继续，因为已经保存到localStorage
-  }
-  
-  // 通过WebSocket实时通知管理员
-  socketStore.submitRepair(newRepair)
-  
-  // 学生端看到的通知
-  socketStore.addLocalNotification({
-    type: 'repair',
-    title: '报修提交成功',
-    content: `您的报修「${newRepair.title}」已提交，位置：${newRepair.location}，管理员将尽快处理`,
-    time: new Date().toISOString(),
-    targetRole: userRole,
-    forAdmin: false
-  })
-  
-  // 管理员端看到的通知（不同的文案）
-  const roleLabel = userRole === 'teacher' ? '教师' : '学生'
-  socketStore.addLocalNotification({
-    type: 'repair',
-    title: '新报修工单',
-    content: `${roleLabel}${userName}提交了报修「${newRepair.title}」，位置：${newRepair.location}，请及时处理`,
-    time: new Date().toISOString(),
-    targetRole: 'admin',
-    forAdmin: true,
-    sourceUserName: userName,
-    sourceUserRole: userRole
-  })
-  
-  ElMessage.success('报修提交成功，管理员将尽快处理')
-  showRepairDialog.value = false
-  repairForm.value = { title: '', category: 'other', location: '', description: '', locationPath: [] }
-}
 
 watch(activeTab, (tab) => {
   if (tab === 'repair') fetchRepairs()
@@ -1704,7 +1319,6 @@ onMounted(() => {
   color: #9ca3af;
 }
 
-/* 修复所有蓝底按钮样式 - 改为白底蓝字，提高可读性 */
 .el-button--primary:not(.is-text):not(.is-link) {
   background: #fff !important;
   color: #409eff !important;

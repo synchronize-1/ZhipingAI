@@ -3,11 +3,11 @@
     <!-- 顶部个人信息卡 -->
     <view class="profile-header">
       <view class="avatar-section">
-        <view class="avatar">{{ user?.name?.charAt(0) || '原' }}</view>
+        <view class="avatar">{{ user?.name?.charAt(0)}}</view>
         <view class="level-badge">Lv.{{ level }}</view>
       </view>
       <view class="user-info">
-        <text class="user-name">{{ user?.name || '原神大王' }}</text>
+        <text class="user-name">{{ user?.name || 'christie' }}</text>
         <text class="user-title">{{ currentTitle }}</text>
         <view class="exp-bar">
           <view class="exp-fill" :style="{ width: expPercent + '%' }"></view>
@@ -467,7 +467,7 @@ export default {
     }
   },
   onShow() {
-    this.user = uni.getStorageSync('user') || { name: '原神大王' }
+    this.user = uni.getStorageSync('user') || { name: 'christie' }
     this.checkFestival()
     this.loadMoodHistory()
   },

@@ -104,7 +104,7 @@ export default {
     }
   },
   onLoad() {
-    this.user = uni.getStorageSync('user') || { name: '原神大王' }
+    this.user = uni.getStorageSync('user') || { name: 'christie' }
     this.addWelcomeMessage()
   },
   methods: {
@@ -277,7 +277,7 @@ export default {
       }
       
       return {
-        content: '抱歉，我暂时无法理解您的问题。您可以尝试：\n\n• 查询今日课表\n• 查找空闲教室\n• 查看食堂人流\n• 图书馆信息\n• 校园导航\n• 快速报修\n\n或者直接点击下方快捷按钮~',
+        content: '抱歉，我暂时无法理解您的问题。您可以尝试：\n\n• 查询今日课表\n• 查找空闲教室\n• 查看食堂人流\n• 图书馆信息\n\n或者直接点击下方快捷按钮~',
         actions: []
       }
     },

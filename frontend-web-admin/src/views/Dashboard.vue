@@ -3,8 +3,8 @@
     <!-- 顶部标题区域 -->
     <div class="dashboard-header">
       <div class="header-info">
-        <h1 class="dashboard-title">智慧校园数据大屏</h1>
-        <p class="dashboard-subtitle">实时监控校园运行状态 · {{ currentTime }}</p>
+        <h1 class="dashboard-title">智评AI 数据大屏</h1>
+        <p class="dashboard-subtitle">实时数据 · {{ currentTime }}</p>
       </div>
       <div class="header-actions">
         <el-button type="primary" :icon="Refresh" @click="refreshAllData">刷新数据</el-button>
@@ -12,9 +12,9 @@
       </div>
     </div>
 
-    <!-- 顶部统计卡片 -->
+    <!-- 顶部统计卡片6张 -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
-      <div v-for="(stat, index) in statsCards" :key="index" 
+      <div v-for="(stat, index) in statsCards" :key="index"
            class="stat-card group"
            :style="{ '--gradient': stat.gradient }">
         <div class="flex items-center justify-between">
@@ -35,9 +35,9 @@
     </div>
 
     <!-- 图表区域 -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       <!-- 教室使用率 -->
-      <div class="chart-card lg:col-span-2">
+      <div class="chart-card">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-800">教室使用率趋势</h3>
           <el-radio-group v-model="roomUsagePeriod" size="small">
@@ -48,36 +48,13 @@
         <div ref="roomUsageChart" class="h-72"></div>
       </div>
 
-      <!-- 能耗监测 -->
-      <div class="chart-card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">能耗分布</h3>
-          <el-tag type="success" size="small">绿色校园</el-tag>
-        </div>
-        <div ref="energyChart" class="h-72"></div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <!-- 人流热力图 -->
-      <div class="chart-card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">校园人流热力图</h3>
-          <el-button type="primary" text size="small">
-            <el-icon><Refresh /></el-icon> 刷新
-          </el-button>
-        </div>
-        <div ref="heatmapChart" class="h-80"></div>
-      </div>
-
       <!-- 食堂人流 -->
       <div class="chart-card">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-semibold text-gray-800">食堂实时人流</h3>
-          <span class="text-sm text-gray-500">实时更新</span>
         </div>
         <div class="space-y-4">
-          <div v-for="canteen in canteenCrowd" :key="canteen.id" 
+          <div v-for="canteen in canteenCrowd" :key="canteen.id"
                class="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
             <div class="flex items-center justify-between mb-2">
               <span class="font-medium text-gray-700">{{ canteen.name }}</span>
@@ -85,11 +62,11 @@
                 {{ getCrowdText(canteen.crowd_level) }}
               </el-tag>
             </div>
-            <el-progress 
-              :percentage="canteen.crowd_level || 0" 
-              :color="getCrowdColor(canteen.crowd_level)"
-              :stroke-width="12"
-              :show-text="false"
+            <el-progress
+                :percentage="canteen.crowd_level || 0"
+                :color="getCrowdColor(canteen.crowd_level)"
+                :stroke-width="12"
+                :show-text="false"
             />
             <p class="text-xs text-gray-500 mt-1">
               当前 {{ canteen.current_count || 0 }} 人 / 容量 {{ canteen.capacity }} 人
@@ -99,33 +76,51 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- 出勤率统计 -->
+    <!-- 第二行：图书馆在线人数 + 校园人流热力图 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- 校园人流热力图 -->
       <div class="chart-card">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">本周出勤率</h3>
+          <h3 class="text-lg font-semibold text-gray-800">校园人流热力图</h3>
+          <el-button type="primary" text size="small">
+            <el-icon><Refresh /></el-icon> 刷新
+          </el-button>
         </div>
-        <div ref="attendanceChart" class="h-64"></div>
+        <div ref="heatmapChart" class="h-80"></div>
       </div>
-
-      <!-- 网络负载 -->
+      <!-- 图书馆在线人数 -->
       <div class="chart-card">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">网络负载</h3>
+          <h3 class="text-lg font-semibold text-gray-800">图书馆在线人数</h3>
           <span class="flex items-center text-green-500 text-sm">
-            <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
-            正常
-          </span>
+        <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+        实时
+      </span>
         </div>
-        <div ref="networkChart" class="h-64"></div>
+        <div ref="libraryChart" class="h-72"></div>
       </div>
-
-      <!-- 服务统计 -->
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       <div class="chart-card">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">服务请求</h3>
+          <h3 class="text-lg font-semibold text-gray-800">图书馆在线人数</h3>
+          <span class="flex items-center text-green-500 text-sm">
+        <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+        实时
+      </span>
         </div>
-        <div ref="serviceChart" class="h-64"></div>
+        <div ref="libraryChart" class="h-72"></div>
+      </div>
+      <!-- 图书馆在线人数 -->
+      <div class="chart-card">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800">图书馆在线人数</h3>
+          <span class="flex items-center text-green-500 text-sm">
+        <span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></span>
+        实时
+      </span>
+        </div>
+        <div ref="libraryChart" class="h-72"></div>
       </div>
     </div>
   </div>
@@ -148,22 +143,18 @@ const currentTime = ref('')
 const isFullScreen = ref(false)
 
 const statsCards = ref([
-  { label: '在校学生', value: '12,580', change: 2.5, icon: 'User', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { label: '教职员工', value: '856', change: 1.2, icon: 'Avatar', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { label: '今日课程', value: '328', change: -3.1, icon: 'Reading', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-  { label: '待处理事项', value: '47', change: 15.3, icon: 'Bell', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-  { label: '活动报名', value: '1,234', change: 8.7, icon: 'Flag', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { label: '设备在线', value: '98.5%', change: 0.3, icon: 'Monitor', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' }
+  { label: '在校学生', value: '12,580', change: 2.5, icon: 'User', gradient: 'linear-gradient(135deg, #3b82f6 0%, #1e3a5f 100%)' },
+  { label: '教职员工', value: '856', change: 1.2, icon: 'Avatar', gradient: 'linear-gradient(135deg, #10b981 0%, #047857 100%)' },
+  { label: '今日课程', value: '328', change: -3.1, icon: 'Reading', gradient: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)' },
+  { label: '待办事项', value: '47', change: 15.3, icon: 'Bell', gradient: 'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)' },
+  { label: 'xxxx', value: '?', change: 8.7, icon: 'Flag', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+  { label: 'xxxx', value: '?%', change: 0.3, icon: 'Monitor', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' }
 ])
 
 const refreshAllData = () => {
   fetchData()
   initRoomUsageChart()
-  initEnergyChart()
   initHeatmapChart()
-  initAttendanceChart()
-  initNetworkChart()
-  initServiceChart()
 }
 
 const toggleFullScreen = () => {
@@ -178,25 +169,21 @@ const toggleFullScreen = () => {
 
 const updateTime = () => {
   const now = new Date()
-  currentTime.value = now.toLocaleString('zh-CN', { 
+  currentTime.value = now.toLocaleString('zh-CN', {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit'
   })
 }
 
 const roomUsageChart = ref(null)
-const energyChart = ref(null)
 const heatmapChart = ref(null)
-const attendanceChart = ref(null)
-const networkChart = ref(null)
-const serviceChart = ref(null)
 
 let charts = []
 
 const initRoomUsageChart = () => {
   const chart = echarts.init(roomUsageChart.value)
   charts.push(chart)
-  
+
   chart.setOption({
     tooltip: { trigger: 'axis' },
     legend: { data: ['教学楼A', '教学楼B', '实验楼'], bottom: 0 },
@@ -233,37 +220,14 @@ const initRoomUsageChart = () => {
   })
 }
 
-const initEnergyChart = () => {
-  const chart = echarts.init(energyChart.value)
-  charts.push(chart)
-  
-  chart.setOption({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 0, itemWidth: 10, itemHeight: 10 },
-    series: [{
-      type: 'pie',
-      radius: ['45%', '70%'],
-      avoidLabelOverlap: false,
-      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-      label: { show: false },
-      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
-      data: [
-        { value: 45, name: '电力', itemStyle: { color: '#3b82f6' } },
-        { value: 30, name: '水', itemStyle: { color: '#10b981' } },
-        { value: 25, name: '燃气', itemStyle: { color: '#f59e0b' } }
-      ]
-    }]
-  })
-}
-
 const initHeatmapChart = () => {
   const chart = echarts.init(heatmapChart.value)
   charts.push(chart)
-  
+
   const locations = ['教学楼A', '教学楼B', '图书馆', '食堂', '体育馆', '宿舍区']
   const currentData = [850, 620, 430, 280, 150, 720]
   const maxCapacity = [1200, 800, 600, 500, 300, 1000]
-  
+
   chart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -307,75 +271,6 @@ const initHeatmapChart = () => {
   })
 }
 
-const initAttendanceChart = () => {
-  const chart = echarts.init(attendanceChart.value)
-  charts.push(chart)
-  
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    grid: { left: '3%', right: '4%', bottom: '3%', top: '15%', containLabel: true },
-    xAxis: { type: 'category', data: ['周一', '周二', '周三', '周四', '周五'] },
-    yAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' } },
-    series: [{
-      type: 'bar',
-      data: [95, 92, 94, 91, 96],
-      itemStyle: {
-        borderRadius: [8, 8, 0, 0],
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#3b82f6' },
-          { offset: 1, color: '#8b5cf6' }
-        ])
-      }
-    }]
-  })
-}
-
-const initNetworkChart = () => {
-  const chart = echarts.init(networkChart.value)
-  charts.push(chart)
-  
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
-    xAxis: { type: 'category', boundaryGap: false, data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'] },
-    yAxis: { type: 'value', axisLabel: { formatter: '{value} Mbps' } },
-    series: [{
-      type: 'line',
-      smooth: true,
-      symbol: 'none',
-      areaStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(59, 130, 246, 0.5)' },
-          { offset: 1, color: 'rgba(59, 130, 246, 0.05)' }
-        ])
-      },
-      lineStyle: { color: '#3b82f6', width: 2 },
-      data: [120, 80, 350, 580, 620, 450, 200]
-    }]
-  })
-}
-
-const initServiceChart = () => {
-  const chart = echarts.init(serviceChart.value)
-  charts.push(chart)
-  
-  chart.setOption({
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 0 },
-    series: [{
-      type: 'pie',
-      radius: '60%',
-      data: [
-        { value: 35, name: '报修', itemStyle: { color: '#ef4444' } },
-        { value: 25, name: '借阅', itemStyle: { color: '#3b82f6' } },
-        { value: 20, name: '预约', itemStyle: { color: '#10b981' } },
-        { value: 20, name: '其他', itemStyle: { color: '#8b5cf6' } }
-      ],
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
-    }]
-  })
-}
-
 const getCrowdTagType = (level) => {
   if (level < 40) return 'success'
   if (level < 70) return 'warning'
@@ -393,21 +288,21 @@ const getCrowdColor = (level) => {
   if (level < 70) return '#f59e0b'
   return '#ef4444'
 }
-
+// 从后端抓取数据的方法
 const fetchData = async () => {
   try {
     const [overviewRes, canteenRes] = await Promise.all([
       api.dashboard.overview(),
       api.services.canteenCrowd()
     ])
-    
+
     if (overviewRes.success) {
       statsCards.value[0].value = overviewRes.data.total_students?.toLocaleString() || '12,580'
       statsCards.value[1].value = overviewRes.data.total_teachers?.toLocaleString() || '856'
       statsCards.value[2].value = overviewRes.data.total_courses?.toLocaleString() || '328'
       statsCards.value[3].value = overviewRes.data.pending_repairs?.toString() || '47'
     }
-    
+
     if (canteenRes.success) {
       canteenCrowd.value = canteenRes.data
     }
@@ -429,18 +324,13 @@ let timeInterval = null
 onMounted(() => {
   fetchData()
   initRoomUsageChart()
-  initEnergyChart()
   initHeatmapChart()
-  initAttendanceChart()
-  initNetworkChart()
-  initServiceChart()
   window.addEventListener('resize', handleResize)
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
 })
 
 onActivated(() => {
-  // 从keep-alive缓存激活时，重新调整所有图表大小
   setTimeout(() => {
     charts.forEach(chart => {
       if (chart && !chart.isDisposed()) {
@@ -518,9 +408,9 @@ watch(roomUsagePeriod, () => {
   content: '';
   position: absolute;
   inset: 0;
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%);
+  background:
+      radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 40%);
   border-radius: 24px;
   pointer-events: none;
 }
@@ -549,7 +439,6 @@ watch(roomUsagePeriod, () => {
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--gradient);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -589,7 +478,6 @@ watch(roomUsagePeriod, () => {
   color: #64748b !important;
 }
 
-/* 食堂人流卡片样式 */
 .chart-card .bg-gray-50 {
   background: #f8fafc !important;
   border: 1px solid #e2e8f0;
@@ -603,17 +491,14 @@ watch(roomUsagePeriod, () => {
   color: #334155 !important;
 }
 
-/* 进度条样式 */
 .chart-card :deep(.el-progress-bar__outer) {
   background: #e2e8f0;
 }
 
-/* 网格线条 */
 .grid {
   position: relative;
 }
 
-/* 动画效果 */
 @keyframes pulse-glow {
   0%, 100% {
     box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);

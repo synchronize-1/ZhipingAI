@@ -32,12 +32,14 @@ request.interceptors.response.use(
 )
 
 export default {
+  //认证模块
   auth: {
     login: data => request.post('/auth/login', data),
     register: data => request.post('/auth/register', data),
     me: () => request.get('/auth/me'),
     changePassword: data => request.post('/auth/change-password', data)
   },
+  //用户模块
   user: {
     uploadAvatar: (userId, formData) => request.post(`/users/${userId}/avatar`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -51,6 +53,7 @@ export default {
     update: (id, data) => request.put(`/users/${id}`, data),
     dashboard: id => request.get(`/users/${id}/dashboard`)
   },
+  // 课程模块
   courses: {
     list: params => request.get('/courses', { params }),
     get: id => request.get(`/courses/${id}`),
@@ -58,24 +61,25 @@ export default {
     students: id => request.get(`/courses/${id}/students`),
     recommend: () => request.get('/courses/recommend/resources')
   },
+  // 课表模块
   schedules: {
     my: params => request.get('/schedules/my', { params }),
     today: () => request.get('/schedules/today'),
     upcoming: params => request.get('/schedules/upcoming', { params }),
     locationCheck: data => request.post('/schedules/location-check', data)
   },
+  // 服务模块
   services: {
-    rooms: params => request.get('/services/rooms/available', { params }),
-    buildings: () => request.get('/services/rooms/buildings'),
-    reserveRoom: data => request.post('/services/rooms/reserve', data),
     repairs: () => request.get('/services/repairs/my'),
     createRepair: data => request.post('/services/repairs', data),
     books: params => request.get('/services/books', { params }),
     borrowBook: id => request.post(`/services/books/${id}/borrow`),
     canteens: () => request.get('/services/canteens'),
     canteenCrowd: () => request.get('/services/canteens/crowd'),
-    menu: id => request.get(`/services/canteens/${id}/menu`)
+    menu: id => request.get(`/services/canteens/${id}/menu`),
+    equipments: params => request.get('/services/equipments', { params })
   },
+
   security: {
     attendance: params => request.get('/security/attendance/statistics', { params }),
     courseAttendance: (id, params) => request.get(`/security/attendance/course/${id}`, { params }),
@@ -87,21 +91,10 @@ export default {
     greenTips: () => request.get('/security/green-tips')
   },
   dashboard: {
-    overview: () => request.get('/dashboard/overview'),
-    roomUsage: params => request.get('/dashboard/room-usage', { params }),
-    roomStatus: () => request.get('/dashboard/room-status'),
-    energy: params => request.get('/dashboard/energy', { params }),
-    heatmap: () => request.get('/dashboard/heatmap'),
-    network: () => request.get('/dashboard/network'),
-    attendance: params => request.get('/dashboard/attendance', { params }),
-    serviceStats: () => request.get('/dashboard/service-stats')
+    overview: () => request.get('/dashboard/overview')
   },
+  // 成长模块
   social: {
-    activities: params => request.get('/social/activities', { params }),
-    createActivity: data => request.post('/social/activities', data),
-    joinActivity: id => request.post(`/social/activities/${id}/join`),
-    groups: params => request.get('/social/groups', { params }),
-    joinGroup: id => request.post(`/social/groups/${id}/join`),
     growth: id => request.get(`/social/growth/${id}`),
     greeting: () => request.get('/social/greeting')
   },
@@ -115,6 +108,7 @@ export default {
     updateReminderSettings: data => request.put('/notifications/reminder-settings', data)
   },
   // //数据库连接时的真实情况
+  // //AI健康评估模块（核心）
   // aiHealth: {
   //   overview: () => request.get('/ai-health/overview'),
   //   students: params => request.get('/ai-health/students', { params }),
@@ -124,7 +118,7 @@ export default {
   //   interventionFeedback: () => request.get('/ai-health/interventions/feedback'),
   //   analytics: () => request.get('/ai-health/analytics')
   // }
-    aiHealth: {
+  aiHealth: {
         overview: () => {
             if (USE_MOCK) {
                 return Promise.resolve({

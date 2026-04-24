@@ -188,7 +188,7 @@
       <div class="p-6">
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications', 'Security', 'AIHealthAssessment']">
+            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications']">
               <component :is="Component" :key="route.path" />
             </keep-alive>
           </transition>
@@ -292,13 +292,13 @@ const menuItems = computed(() => {
     { path: '/my-courses', title: '我的课程', icon: 'Reading', roles: ['student'] },
     { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },
     { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },
-    { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
+    // { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
     { path: '/admin-health', title: 'AI健康评估', icon: 'DataAnalysis', roles: ['admin'] },
-    { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
-    { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },
-    { path: '/my-attendance', title: '我的考勤', icon: 'Checked', roles: ['student'] },
+    // { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
+    // { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },
+    // { path: '/my-attendance', title: '我的考勤', icon: 'Checked', roles: ['student'] },
     { path: '/services', title: '校园服务', icon: 'Service', roles: ['student', 'teacher', 'admin'] },
-    { path: '/activities', title: '校园活动', icon: 'Flag', roles: ['student', 'teacher', 'admin'] },
+    // { path: '/activities', title: '校园活动', icon: 'Flag', roles: ['student', 'teacher', 'admin'] },
     { path: '/growth', title: '成长档案', icon: 'TrendCharts', roles: ['student'] },
     { path: '/learning', title: '学习资源', icon: 'Reading', roles: ['student'] },
     { path: '/ai-learning', title: 'AI学习助手', icon: 'Reading', roles: ['student'] },
@@ -307,8 +307,8 @@ const menuItems = computed(() => {
     { path: '/ai-creative', title: 'AI创意工具', icon: 'Picture', roles: ['student'] },
     { path: '/ai-sentiment', title: 'AI情感分析', icon: 'Sunny', roles: ['student'] },
     { path: '/ai-science', title: 'AI科普乐园', icon: 'MagicStick', roles: ['student', 'teacher', 'admin'] },
-    { path: '/energy', title: '能耗监测', icon: 'Odometer', roles: ['admin'] },
-    { path: '/security', title: '安全管理', icon: 'Lock', roles: ['admin'] },
+    // { path: '/energy', title: '能耗监测', icon: 'Odometer', roles: ['admin'] },
+    // { path: '/security', title: '安全管理', icon: 'Lock', roles: ['admin'] },
     { path: '/notifications', title: '通知中心', icon: 'Bell', roles: ['student', 'teacher', 'admin'] },
     { path: '/profile', title: '个人设置', icon: 'Setting', roles: ['student', 'teacher', 'admin'] }
   ]

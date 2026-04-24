@@ -159,7 +159,7 @@ const fetchUsers = async () => {
   
   // 默认示例数据
   const sampleUsers = [
-    { id: 1, username: 'student001', name: '原神大王', role: 'student', department: '计算机与软件学院', email: 'yuanshen@campus.edu', phone: '13800138001', avatar: avatarMap['student001'] },
+    { id: 1, username: 'student001', name: 'christie', role: 'student', department: '计算机与软件学院', email: 'yuanshen@campus.edu', phone: '13800138001', avatar: avatarMap['student001'] },
     { id: 2, username: 'student002', name: '李四', role: 'student', department: '计算机与软件学院', email: 'lisi@campus.edu', phone: '13800138002', avatar: avatarMap['student002'] },
     { id: 3, username: 'student003', name: '王五', role: 'student', department: '软件工程学院', email: 'wangwu@campus.edu', phone: '13800138003', avatar: avatarMap['student003'] },
     { id: 4, username: 'teacher001', name: '王教授', role: 'teacher', department: '计算机与软件学院', email: 'wangprof@campus.edu', phone: '13900139001', avatar: avatarMap['teacher001'] },

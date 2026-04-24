@@ -1,10 +1,10 @@
-# ==================== 智界·灵动校园 - 最终配置 ====================
+# ==================== 智评AI - 最终配置 ====================
 # 请将以下内容复制到 .env 文件中，替换所有旧配置
 
 # ==================== DeepSeek API ====================
 # 用途：AI对话、AI学习助手、AI写作助手、情感分析、AI科普等所有AI功能
 # 申请地址：https://platform.deepseek.com/
-DEEPSEEK_API_KEY=sk-5lzLEdS2GXHR6tL19B04ulpCkPTpnZdT7WneIs2bSF82BrAI
+DEEPSEEK_API_KEY=xxxxxxxxx
 DEEPSEEK_API_URL=https://openrouter.fans/v1/chat/completions
 
 # ==================== Umi-OCR 本地服务 ====================
