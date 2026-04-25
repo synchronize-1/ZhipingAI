@@ -1,3 +1,4 @@
+// frontend-web-admin/src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 
@@ -19,6 +20,7 @@ const routes = [
                 component: () => import('@/views/Dashboard.vue'),
                 meta: { title: '数据可视化大屏', icon: 'DataAnalysis', roles: ['admin'] }
             },
+            //从home 定义不同角色的vue组件
             {
                 path: 'home',
                 name: 'Home',
@@ -55,6 +57,7 @@ const routes = [
                 component: () => import('@/views/Users.vue'),
                 meta: { title: '用户管理', icon: 'User', roles: ['admin'] }
             },
+            //课程
             {
                 path: 'courses',
                 name: 'Courses',
@@ -67,18 +70,18 @@ const routes = [
                 component: () => import('@/views/Courses.vue'),
                 meta: { title: '我的课程', icon: 'Reading', roles: ['student'] }
             },
-            {
-                path: 'schedule',
-                name: 'Schedule',
-                component: () => import('@/views/Schedule.vue'),
-                meta: { title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] }
-            },
-            {
-                path: 'my-schedule',
-                name: 'MySchedule',
-                component: () => import('@/views/Schedule.vue'),
-                meta: { title: '我的课表', icon: 'Calendar', roles: ['student'] }
-            },
+            // {
+            //     path: 'schedule',
+            //     name: 'Schedule',
+            //     component: () => import('@/views/Schedule.vue'),
+            //     meta: { title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] }
+            // },
+            // {
+            //     path: 'my-schedule',
+            //     name: 'MySchedule',
+            //     component: () => import('@/views/Schedule.vue'),
+            //     meta: { title: '我的课表', icon: 'Calendar', roles: ['student'] }
+            // },
             {
                 path: 'services',
                 name: 'Services',

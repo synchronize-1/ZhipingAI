@@ -292,8 +292,8 @@ const menuItems = computed(() => {
     { path: '/users', title: '用户管理', icon: 'User', roles: ['admin'] },
     { path: '/courses', title: '课程管理', icon: 'Reading', roles: ['teacher', 'admin'] },
     { path: '/my-courses', title: '我的课程', icon: 'Reading', roles: ['student'] },
-    { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },
-    { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },
+    // { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },   //管理员：课程管理
+    // { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },         //学生：我的课表
     // { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
     // { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
     // { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },

@@ -161,13 +161,13 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI设计方案</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(posterResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(posterResult)"></div>
                 <div class="result-actions">
                   <el-button type="primary" @click="downloadPosterDesign">
                     <el-icon><Download /></el-icon>
                     导出设计稿
                   </el-button>
-                  <el-button @click="copyResult(posterResult)">
+                  <el-button @click="copyWithMessage(posterResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制方案
                   </el-button>
@@ -233,100 +233,15 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>思维导图结构</h4>
                 </div>
-                <div class="result-content mindmap-content" v-html="formatMindmap(mindmapResult)"></div>
+                <div class="result-content markdown-body mindmap-content" v-html="renderMarkdown(mindmapResult)"></div>
                 <div class="result-actions">
                   <el-button type="primary" @click="exportMindmap">
                     <el-icon><Download /></el-icon>
                     导出图片
                   </el-button>
-                  <el-button @click="copyResult(mindmapResult)">
+                  <el-button @click="copyWithMessage(mindmapResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制结构
-                  </el-button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-tab-pane>
-
-        <!-- PPT助手 -->
-        <el-tab-pane label="PPT助手" name="ppt">
-          <div class="tab-content">
-            <div class="feature-card">
-              <div class="card-header">
-                <el-icon class="feature-icon"><Monitor /></el-icon>
-                <h3>AI PPT助手</h3>
-                <p>快速生成PPT大纲和内容</p>
-              </div>
-
-              <el-form :model="pptForm" label-width="100px" class="ai-form">
-                <el-form-item label="PPT主题">
-                  <el-input
-                      v-model="pptForm.topic"
-                      placeholder="例如：环境保护、科技创新、历史回顾等"
-                      maxlength="50"
-                  />
-                </el-form-item>
-
-                <el-form-item label="目标听众">
-                  <el-select v-model="pptForm.audience" placeholder="选择听众类型">
-                    <el-option label="同学" value="同学" />
-                    <el-option label="老师" value="老师" />
-                    <el-option label="评委" value="评委" />
-                    <el-option label="大众" value="大众" />
-                  </el-select>
-                </el-form-item>
-
-                <el-form-item label="页数要求">
-                  <el-slider
-                      v-model="pptForm.pageCount"
-                      :min="5"
-                      :max="30"
-                      :step="5"
-                      show-stops
-                      :format-tooltip="(val) => `${val}页`"
-                  />
-                  <span class="slider-value">{{ pptForm.pageCount }}页</span>
-                </el-form-item>
-
-                <el-form-item label="核心内容">
-                  <el-input
-                      v-model="pptForm.content"
-                      type="textarea"
-                      :rows="6"
-                      placeholder="请简要描述PPT需要包含的核心内容和要点"
-                  />
-                </el-form-item>
-
-                <el-form-item>
-                  <el-button
-                      type="primary"
-                      size="large"
-                      @click="generatePPT"
-                      :loading="pptLoading"
-                      :disabled="!pptForm.topic.trim() || !pptForm.content.trim()"
-                  >
-                    <el-icon><MagicStick /></el-icon>
-                    AI生成大纲
-                  </el-button>
-                  <el-button size="large" @click="clearPPT">清空</el-button>
-                </el-form-item>
-              </el-form>
-
-              <div class="result-area" v-if="pptResult">
-                <div class="result-header">
-                  <el-icon class="result-icon"><CircleCheck /></el-icon>
-                  <h4>PPT大纲和内容</h4>
-                </div>
-                <div class="result-content ppt-content" v-html="formatResult(pptResult)"></div>
-                <div class="result-actions">
-                  <el-button type="primary" @click="exportPPT">
-                    <el-icon><Download /></el-icon>
-                    导出大纲
-                  </el-button>
-                  <el-button @click="copyResult(pptResult)">
-                    <el-icon><DocumentCopy /></el-icon>
-                    复制内容
                   </el-button>
                 </div>
               </div>
@@ -343,9 +258,10 @@ import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Brush, MagicStick, CircleCheck, Download, FolderAdd, RefreshRight,
-  Postcard, DocumentCopy, Share, Monitor
+  Postcard, DocumentCopy, Share
 } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { renderMarkdown, copyWithMessage } from '@/composables/useMarkdownRenderer'
 
 const API_BASE = 'http://localhost:3000/api/ai-science'
 
@@ -376,15 +292,6 @@ const mindmapForm = reactive({
 })
 const mindmapLoading = ref(false)
 const mindmapResult = ref('')
-
-const pptForm = reactive({
-  topic: '',
-  audience: '同学',
-  pageCount: 15,
-  content: ''
-})
-const pptLoading = ref(false)
-const pptResult = ref('')
 
 const generatePainting = async () => {
   paintingLoading.value = true
@@ -459,9 +366,13 @@ ${posterForm.info}
 2. 布局建议（标题、主体、装饰元素等的位置）
 3. 色彩搭配方案
 4. 字体建议
-5. 视觉元素建议`
+5. 视觉元素建议
 
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
+请用Markdown格式输出，使用标题、列表等格式使方案更清晰易读。`
+
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message: prompt
+    })
 
     if (response.data.success) {
       posterResult.value = response.data.data.reply
@@ -491,11 +402,12 @@ ${mindmapForm.content}
 - 层级深度：${mindmapForm.depth}层
 - 提取关键概念和要点
 - 建立清晰的层级关系
-- 使用缩进表示层级
 
-请以树状结构输出，使用缩进表示层级关系。`
+请用Markdown格式输出，使用标题层级（# ## ###）来表示思维导图的结构层次。`
 
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message: prompt
+    })
 
     if (response.data.success) {
       mindmapResult.value = response.data.data.reply
@@ -509,39 +421,6 @@ ${mindmapForm.content}
     ElMessage.error('AI服务暂时不可用，请稍后再试')
   } finally {
     mindmapLoading.value = false
-  }
-}
-
-const generatePPT = async () => {
-  pptLoading.value = true
-  try {
-    const prompt = `请帮我生成一个PPT的大纲和内容：
-
-主题：${pptForm.topic}
-目标听众：${pptForm.audience}
-页数：约${pptForm.pageCount}页
-核心内容：
-${pptForm.content}
-
-请提供：
-1. 完整的PPT大纲（每页的标题）
-2. 每页的核心内容要点
-3. 演讲建议`
-
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
-
-    if (response.data.success) {
-      pptResult.value = response.data.data.reply
-      creativeCount.value++
-      ElMessage.success('PPT大纲生成完成！')
-    } else {
-      throw new Error(response.data.message)
-    }
-  } catch (error) {
-    console.error('PPT生成错误:', error)
-    ElMessage.error('AI服务暂时不可用，请稍后再试')
-  } finally {
-    pptLoading.value = false
   }
 }
 
@@ -573,34 +452,6 @@ const clearMindmap = () => {
   mindmapResult.value = ''
 }
 
-const clearPPT = () => {
-  Object.assign(pptForm, {
-    topic: '',
-    audience: '同学',
-    pageCount: 15,
-    content: ''
-  })
-  pptResult.value = ''
-}
-
-const formatResult = (text) => {
-  return text
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
-}
-
-const formatMindmap = (text) => {
-  return text
-      .replace(/\n/g, '<br>')
-      .replace(/^(\s+)/gm, (match) => '&nbsp;'.repeat(match.length * 2))
-}
-
-const copyResult = (text) => {
-  navigator.clipboard.writeText(text)
-  ElMessage.success('已复制到剪贴板')
-}
-
 const downloadPainting = () => {
   if (paintingResult.value?.imageUrl) {
     window.open(paintingResult.value.imageUrl, '_blank')
@@ -622,10 +473,6 @@ const downloadPosterDesign = () => {
 
 const exportMindmap = () => {
   ElMessage.info('思维导图导出功能开发中...')
-}
-
-const exportPPT = () => {
-  ElMessage.info('PPT导出功能开发中...')
 }
 </script>
 
@@ -738,12 +585,115 @@ const exportPPT = () => {
 
 .mindmap-content {
   font-family: monospace;
-  white-space: pre-wrap;
 }
 
 .result-actions {
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+/* Markdown 样式 */
+.markdown-body :deep(h1) {
+  font-size: 24px;
+  margin: 16px 0 8px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #fa709a;
+}
+
+.markdown-body :deep(h2) {
+  font-size: 20px;
+  margin: 14px 0 6px 0;
+  padding-left: 10px;
+  border-left: 4px solid #fa709a;
+}
+
+.markdown-body :deep(h3) {
+  font-size: 18px;
+  margin: 12px 0 5px 0;
+  color: #e6a23c;
+}
+
+.markdown-body :deep(h4) {
+  font-size: 16px;
+  margin: 10px 0 4px 0;
+}
+
+.markdown-body :deep(p) {
+  margin: 8px 0;
+}
+
+.markdown-body :deep(ul), .markdown-body :deep(ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.markdown-body :deep(li) {
+  margin: 4px 0;
+}
+
+.markdown-body :deep(pre) {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.markdown-body :deep(code) {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+.markdown-body :deep(code:not(pre code)) {
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #e6a23c;
+}
+
+.markdown-body :deep(blockquote) {
+  border-left: 3px solid #909399;
+  background: #f5f5f5;
+  padding: 8px 16px;
+  margin: 12px 0;
+  color: #606266;
+  font-style: italic;
+}
+
+.markdown-body :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 12px 0;
+}
+
+.markdown-body :deep(th), .markdown-body :deep(td) {
+  border: 1px solid #dcdfe6;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.markdown-body :deep(th) {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+.markdown-body :deep(hr) {
+  margin: 16px 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #dcdfe6, transparent);
+}
+
+/* KaTeX 样式 */
+.markdown-body :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.markdown-body :deep(.katex-display) {
+  margin: 12px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>

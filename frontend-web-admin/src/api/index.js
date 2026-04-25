@@ -61,13 +61,6 @@ export default {
     students: id => request.get(`/courses/${id}/students`),
     recommend: () => request.get('/courses/recommend/resources')
   },
-  // 课表模块
-  schedules: {
-    my: params => request.get('/schedules/my', { params }),
-    today: () => request.get('/schedules/today'),
-    upcoming: params => request.get('/schedules/upcoming', { params }),
-    locationCheck: data => request.post('/schedules/location-check', data)
-  },
   // 服务模块
   services: {
     repairs: () => request.get('/services/repairs/my'),

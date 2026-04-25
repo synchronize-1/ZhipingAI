@@ -14,7 +14,7 @@
       </el-tab-pane>
 
       <!-- 白话AI原理 -->
-      <el-tab-pane label="🙋 白话AI原理" name="PlainSpeak">
+      <el-tab-pane label="🙋 白话讲AI" name="PlainSpeak">
         <AIPlainSpeak />
       </el-tab-pane>
 

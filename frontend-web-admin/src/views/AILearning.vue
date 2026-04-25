@@ -38,7 +38,7 @@
                   </el-radio-group>
                 </el-form-item>
 
-                <el-form-item label="题目内容">
+                <el-form-item label="题目内容" required>
                   <el-input
                       v-model="homeworkForm.question"
                       type="textarea"
@@ -47,24 +47,6 @@
                       maxlength="2000"
                       show-word-limit
                   />
-                </el-form-item>
-
-                <el-form-item label="图片上传">
-                  <el-upload
-                      class="upload-demo"
-                      drag
-                      :auto-upload="false"
-                      :on-change="handleImageUpload"
-                      accept="image/*"
-                  >
-                    <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-                    <div class="el-upload__text">
-                      将题目图片拖到此处，或<em>点击上传</em>
-                    </div>
-                    <template #tip>
-                      <div class="el-upload__tip">支持jpg/png格式，大小不超过5MB</div>
-                    </template>
-                  </el-upload>
                 </el-form-item>
 
                 <el-form-item>
@@ -87,15 +69,11 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI解答结果</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(homeworkResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(homeworkResult)"></div>
                 <div class="result-actions">
-                  <el-button @click="copyResult(homeworkResult)">
+                  <el-button @click="copyWithMessage(homeworkResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制结果
-                  </el-button>
-                  <el-button @click="continueAsk">
-                    <el-icon><ChatDotRound /></el-icon>
-                    继续提问
                   </el-button>
                 </div>
               </div>
@@ -128,7 +106,7 @@
                   </el-select>
                 </el-form-item>
 
-                <el-form-item label="知识点">
+                <el-form-item label="知识点" required>
                   <el-input
                       v-model="knowledgeForm.topic"
                       placeholder="例如：二次函数、牛顿第一定律、光合作用等"
@@ -174,15 +152,11 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI讲解内容</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(knowledgeResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(knowledgeResult)"></div>
                 <div class="result-actions">
-                  <el-button @click="copyResult(knowledgeResult)">
+                  <el-button @click="copyWithMessage(knowledgeResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制内容
-                  </el-button>
-                  <el-button @click="generateMindMap">
-                    <el-icon><Share /></el-icon>
-                    生成思维导图
                   </el-button>
                 </div>
               </div>
@@ -197,14 +171,14 @@
               <div class="card-header">
                 <el-icon class="feature-icon"><Calendar /></el-icon>
                 <h3>AI学习计划</h3>
-                <p>根据你的情况，AI为你制定个性化学习计划</p>
+                <p>个性化定制，日拱一卒</p>
               </div>
 
               <el-form :model="planForm" label-width="120px" class="ai-form">
-                <el-form-item label="学习目标">
+                <el-form-item label="学习目标" required>
                   <el-input
                       v-model="planForm.goal"
-                      placeholder="例如：期末考试提高20分、掌握高等数学基础知识等"
+                      placeholder="example：1天速通大学物理、3天掌握高等数学基础知识"
                       maxlength="100"
                   />
                 </el-form-item>
@@ -278,19 +252,11 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>你的专属学习计划</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(planResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(planResult)"></div>
                 <div class="result-actions">
-                  <el-button type="primary" @click="savePlan">
-                    <el-icon><FolderAdd /></el-icon>
-                    保存计划
-                  </el-button>
-                  <el-button @click="copyResult(planResult)">
+                  <el-button @click="copyWithMessage(planResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制计划
-                  </el-button>
-                  <el-button @click="exportPlan">
-                    <el-icon><Download /></el-icon>
-                    导出PDF
                   </el-button>
                 </div>
               </div>
@@ -305,7 +271,7 @@
               <div class="card-header">
                 <el-icon class="feature-icon"><Warning /></el-icon>
                 <h3>AI错题分析</h3>
-                <p>上传错题，AI帮你分析错误原因并提供改进建议</p>
+                <p>错题退，好运来！错题快端上来吧</p>
               </div>
 
               <el-form :model="errorForm" label-width="100px" class="ai-form">
@@ -319,7 +285,7 @@
                   </el-select>
                 </el-form-item>
 
-                <el-form-item label="题目内容">
+                <el-form-item label="题目内容" required>
                   <el-input
                       v-model="errorForm.question"
                       type="textarea"
@@ -328,7 +294,7 @@
                   />
                 </el-form-item>
 
-                <el-form-item label="你的答案">
+                <el-form-item label="你的答案" required>
                   <el-input
                       v-model="errorForm.myAnswer"
                       type="textarea"
@@ -342,7 +308,7 @@
                       v-model="errorForm.correctAnswer"
                       type="textarea"
                       :rows="3"
-                      placeholder="请输入正确答案（如果知道的话）"
+                      placeholder="如果你知道正确答案，请填写"
                   />
                 </el-form-item>
 
@@ -366,15 +332,11 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI错题分析报告</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(errorResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(errorResult)"></div>
                 <div class="result-actions">
-                  <el-button @click="addToErrorBook">
-                    <el-icon><FolderAdd /></el-icon>
-                    加入错题本
-                  </el-button>
-                  <el-button @click="getSimilarQuestions">
-                    <el-icon><Connection /></el-icon>
-                    推荐相似题
+                  <el-button @click="copyWithMessage(errorResult, ElMessage)">
+                    <el-icon><DocumentCopy /></el-icon>
+                    复制报告
                   </el-button>
                 </div>
               </div>
@@ -391,10 +353,10 @@ import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   EditPen, Reading, Calendar, Warning, MagicStick,
-  UploadFilled, CircleCheck, DocumentCopy, ChatDotRound,
-  FolderAdd, Download, Share, Connection
+  CircleCheck, DocumentCopy
 } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { renderMarkdown, copyWithMessage } from '@/composables/useMarkdownRenderer'
 
 const API_BASE = 'http://localhost:3000/api/ai-science'
 
@@ -403,8 +365,7 @@ const activeTab = ref('homework')
 const homeworkForm = reactive({
   subject: '',
   type: '选择题',
-  question: '',
-  image: null
+  question: ''
 })
 const homeworkLoading = ref(false)
 const homeworkResult = ref('')
@@ -438,88 +399,83 @@ const errorForm = reactive({
 const errorLoading = ref(false)
 const errorResult = ref('')
 
-const handleImageUpload = (file) => {
-  homeworkForm.image = file.raw
-}
-
+// 作业辅导 - AI帮我解答
 const getHomeworkHelp = async () => {
+  if (!homeworkForm.question.trim()) {
+    ElMessage.warning('请输入题目内容')
+    return
+  }
+
   homeworkLoading.value = true
+  homeworkResult.value = ''
+
   try {
-    let questionText = homeworkForm.question
+    const subject = homeworkForm.subject || '未指定'
+    const type = homeworkForm.type
 
-    if (homeworkForm.image) {
-      ElMessage.info('正在识别图片中的文字...')
+    const prompt = `请帮我解答以下${subject}的${type}题目：
 
-      const reader = new FileReader()
-      const base64 = await new Promise((resolve) => {
-        reader.readAsDataURL(homeworkForm.image)
-        reader.onload = () => {
-          resolve(reader.result.split(',')[1])
-        }
-      })
-
-      const ocrResponse = await axios.post(`${API_BASE}/ocr`, {
-        imageBase64: base64
-      })
-
-      if (ocrResponse.data.success) {
-        const ocrText = ocrResponse.data.data.text
-        if (questionText.trim()) {
-          questionText = `${questionText}\n\n图片中的内容：\n${ocrText}`
-        } else {
-          questionText = ocrText
-        }
-        ElMessage.success('图片识别完成！')
-      } else {
-        ElMessage.warning('图片识别失败，将仅使用文字内容')
-      }
-    }
-
-    const prompt = `我是一名学生，遇到了一道${homeworkForm.subject}的${homeworkForm.type}，请帮我解答：
-
-题目：${questionText}
+题目内容：
+${homeworkForm.question}
 
 请提供：
-1. 详细的解题思路
-2. 完整的解题步骤
-3. 相关知识点讲解
-4. 易错点提醒`
+1. 解题思路
+2. 详细步骤
+3. 最终答案
+4. 知识点总结`
 
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message: prompt
+    })
 
     if (response.data.success) {
       homeworkResult.value = response.data.data.reply
       ElMessage.success('AI解答完成！')
     } else {
-      throw new Error(response.data.message)
+      throw new Error(response.data.message || '请求失败')
     }
   } catch (error) {
     console.error('作业辅导错误:', error)
-    ElMessage.error('AI服务暂时不可用，请稍后再试')
+    ElMessage.error(error.response?.data?.message || 'AI服务暂时不可用，请稍后再试')
   } finally {
     homeworkLoading.value = false
   }
 }
 
+// 知识讲解
 const getKnowledgeExplain = async () => {
+  if (!knowledgeForm.topic.trim()) {
+    ElMessage.warning('请输入知识点')
+    return
+  }
+
   knowledgeLoading.value = true
+  knowledgeResult.value = ''
+
   try {
-    const prompt = `请为我讲解${knowledgeForm.subject}中的"${knowledgeForm.topic}"这个知识点。
+    const subject = knowledgeForm.subject || '未指定'
+    const topic = knowledgeForm.topic
+    const depth = knowledgeForm.depth
+    const notes = knowledgeForm.notes
+
+    const prompt = `请讲解${subject}中的知识点"${topic}"。
 
 要求：
-- 讲解深度：${knowledgeForm.depth}
+- 讲解深度：${depth}
 - 使用通俗易懂的语言
-- 包含具体例子和应用场景
-- 总结重点和难点
-${knowledgeForm.notes ? `\n补充要求：${knowledgeForm.notes}` : ''}`
+- 包含具体例子
+- 总结重点
+${notes ? `\n补充要求：${notes}` : ''}`
 
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message: prompt
+    })
 
     if (response.data.success) {
       knowledgeResult.value = response.data.data.reply
       ElMessage.success('AI讲解完成！')
     } else {
-      throw new Error(response.data.message)
+      throw new Error(response.data.message || '请求失败')
     }
   } catch (error) {
     console.error('知识讲解错误:', error)
@@ -529,31 +485,37 @@ ${knowledgeForm.notes ? `\n补充要求：${knowledgeForm.notes}` : ''}`
   }
 }
 
+// 生成学习计划
 const generateStudyPlan = async () => {
-  planLoading.value = true
-  try {
-    const prompt = `请为我制定一个学习计划：
+  if (!planForm.goal.trim()) {
+    ElMessage.warning('请输入学习目标')
+    return
+  }
 
-学习目标：${planForm.goal}
-计划周期：${planForm.period}
-每天学习时间：${planForm.dailyHours}小时
+  planLoading.value = true
+  planResult.value = ''
+
+  try {
+    const prompt = `请制定学习计划：
+
+目标：${planForm.goal}
+周期：${planForm.period}
+每天学习：${planForm.dailyHours}小时
 薄弱科目：${planForm.weakSubjects.join('、') || '无'}
 学习偏好：${planForm.preferences.join('、') || '无'}
-${planForm.notes ? `补充说明：${planForm.notes}` : ''}
+${planForm.notes ? `补充：${planForm.notes}` : ''}
 
-请提供：
-1. 详细的每日/每周学习安排
-2. 各科目的学习重点和时间分配
-3. 阶段性目标和检验方法
-4. 学习建议和注意事项`
+请提供每日/每周安排、学习重点和建议。`
 
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message: prompt
+    })
 
     if (response.data.success) {
       planResult.value = response.data.data.reply
       ElMessage.success('学习计划生成完成！')
     } else {
-      throw new Error(response.data.message)
+      throw new Error(response.data.message || '请求失败')
     }
   } catch (error) {
     console.error('学习计划生成错误:', error)
@@ -563,30 +525,39 @@ ${planForm.notes ? `补充说明：${planForm.notes}` : ''}
   }
 }
 
+// 错题分析
 const analyzeError = async () => {
-  errorLoading.value = true
-  try {
-    const prompt = `请帮我分析这道错题：
+  if (!errorForm.question.trim()) {
+    ElMessage.warning('请输入题目内容')
+    return
+  }
+  if (!errorForm.myAnswer.trim()) {
+    ElMessage.warning('请输入你的答案')
+    return
+  }
 
-学科：${errorForm.subject}
+  errorLoading.value = true
+  errorResult.value = ''
+
+  try {
+    const prompt = `分析错题：
+
+学科：${errorForm.subject || '未指定'}
 题目：${errorForm.question}
 我的答案：${errorForm.myAnswer}
 ${errorForm.correctAnswer ? `正确答案：${errorForm.correctAnswer}` : ''}
 
-请提供：
-1. 错误原因分析
-2. 正确的解题思路和步骤
-3. 相关知识点回顾
-4. 避免类似错误的建议
-5. 推荐相似题型练习`
+请分析错误原因、给出正确解法、相关知识点和避免建议。`
 
-    const response = await axios.post(`${API_BASE}/chat`, { message: prompt })
+    const response = await axios.post(`${API_BASE}/chat`, {
+      message: prompt
+    })
 
     if (response.data.success) {
       errorResult.value = response.data.data.reply
       ElMessage.success('错题分析完成！')
     } else {
-      throw new Error(response.data.message)
+      throw new Error(response.data.message || '请求失败')
     }
   } catch (error) {
     console.error('错题分析错误:', error)
@@ -596,12 +567,12 @@ ${errorForm.correctAnswer ? `正确答案：${errorForm.correctAnswer}` : ''}
   }
 }
 
+// 清空表单
 const clearHomework = () => {
   Object.assign(homeworkForm, {
     subject: '',
     type: '选择题',
-    question: '',
-    image: null
+    question: ''
   })
   homeworkResult.value = ''
 }
@@ -636,43 +607,6 @@ const clearError = () => {
     correctAnswer: ''
   })
   errorResult.value = ''
-}
-
-const formatResult = (text) => {
-  return text
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
-      .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>')
-}
-
-const copyResult = (text) => {
-  navigator.clipboard.writeText(text)
-  ElMessage.success('已复制到剪贴板')
-}
-
-const continueAsk = () => {
-  ElMessage.info('请在AI助手中继续提问')
-}
-
-const generateMindMap = () => {
-  ElMessage.info('思维导图功能开发中...')
-}
-
-const savePlan = () => {
-  ElMessage.success('学习计划已保存')
-}
-
-const exportPlan = () => {
-  ElMessage.info('PDF导出功能开发中...')
-}
-
-const addToErrorBook = () => {
-  ElMessage.success('已加入错题本')
-}
-
-const getSimilarQuestions = () => {
-  ElMessage.info('相似题推荐功能开发中...')
 }
 </script>
 
@@ -768,25 +702,113 @@ const getSimilarQuestions = () => {
   overflow-y: auto;
 }
 
-.result-content :deep(strong) {
-  color: #667eea;
-  font-weight: 600;
-}
-
-.result-content :deep(pre) {
-  background: #f4f4f5;
-  padding: 15px;
-  border-radius: 6px;
-  overflow-x: auto;
-}
-
 .result-actions {
   display: flex;
   gap: 10px;
   justify-content: center;
 }
 
-.upload-demo {
+/* Markdown 样式 */
+.result-content :deep(h1) {
+  font-size: 24px;
+  margin: 16px 0 8px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #667eea;
+}
+
+.result-content :deep(h2) {
+  font-size: 20px;
+  margin: 14px 0 6px 0;
+  padding-left: 10px;
+  border-left: 4px solid #667eea;
+}
+
+.result-content :deep(h3) {
+  font-size: 18px;
+  margin: 12px 0 5px 0;
+  color: #409eff;
+}
+
+.result-content :deep(h4) {
+  font-size: 16px;
+  margin: 10px 0 4px 0;
+}
+
+.result-content :deep(p) {
+  margin: 8px 0;
+}
+
+.result-content :deep(ul), .result-content :deep(ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.result-content :deep(li) {
+  margin: 4px 0;
+}
+
+.result-content :deep(pre) {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.result-content :deep(code) {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+.result-content :deep(code:not(pre code)) {
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #e6a23c;
+}
+
+.result-content :deep(blockquote) {
+  border-left: 3px solid #909399;
+  background: #f5f5f5;
+  padding: 8px 16px;
+  margin: 12px 0;
+  color: #606266;
+  font-style: italic;
+}
+
+.result-content :deep(table) {
+  border-collapse: collapse;
   width: 100%;
+  margin: 12px 0;
+}
+
+.result-content :deep(th), .result-content :deep(td) {
+  border: 1px solid #dcdfe6;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.result-content :deep(th) {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+.result-content :deep(hr) {
+  margin: 16px 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #dcdfe6, transparent);
+}
+
+/* KaTeX 样式 */
+.result-content :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.result-content :deep(.katex-display) {
+  margin: 12px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>

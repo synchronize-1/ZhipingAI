@@ -9,7 +9,7 @@
         </div>
       </template>
       <div class="chat-section">
-        <div class="chat-messages" ref="chatMessages">
+        <div class="chat-messages" ref="chatMessagesRef">
           <div v-if="chatMessages.length === 0 && !chatLoading" class="empty-chat">
             <div class="welcome-icon">🤖</div>
             <h3>你好！我是AI助手</h3>
@@ -18,7 +18,7 @@
           </div>
           <div v-for="(msg, idx) in chatMessages" :key="idx" :class="['message', msg.role]">
             <div class="avatar">{{ msg.role === 'user' ? '👤' : '🤖' }}</div>
-            <div class="bubble">{{ msg.content }}</div>
+            <div class="bubble" v-html="formatChatMessage(msg.content)"></div>
           </div>
           <div v-if="chatLoading" class="message assistant">
             <div class="avatar">🤖</div>
@@ -69,8 +69,8 @@
           </el-tab-pane>
         </el-tabs>
         <div v-if="writingResult" class="writing-result">
-          <div class="result-text">{{ writingResult }}</div>
-          <el-button size="small" @click="copyText(writingResult)">📋 复制</el-button>
+          <div class="result-text" v-html="formatChatMessage(writingResult)"></div>
+          <el-button size="small" @click="copyWithMessage(writingResult, ElMessage)">📋 复制</el-button>
         </div>
       </div>
     </el-card>
@@ -80,8 +80,8 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
+import { formatChatMessage, copyWithMessage } from '@/composables/useMarkdownRenderer'
 
 const API_BASE = 'http://localhost:3000/api/ai-science'
 
@@ -149,11 +149,6 @@ async function writeStory() {
   } catch (e) { ElMessage.error('网络错误') }
   finally { writingLoading.value = false }
 }
-// 复制功能
-function copyText(text) {
-  navigator.clipboard.writeText(text)
-  ElMessage.success('复制成功')
-}
 </script>
 
 <style scoped>
@@ -219,7 +214,7 @@ function copyText(text) {
 }
 
 .writing-result .result-text {
-  white-space: pre-wrap;
+  white-space: normal;
   line-height: 1.8;
   margin-bottom: 15px;
   word-break: break-word;
@@ -272,6 +267,86 @@ function copyText(text) {
   border: 1px solid #e0e0e0;
 }
 
+/* Markdown 渲染样式 */
+.message.assistant .bubble :deep(.md-h2) {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 12px 0 8px 0;
+  color: #303133;
+  border-left: 3px solid #667eea;
+  padding-left: 10px;
+}
+
+.message.assistant .bubble :deep(.md-h3) {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 10px 0 6px 0;
+  color: #409eff;
+}
+
+.message.assistant .bubble :deep(.md-h4) {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 8px 0 4px 0;
+  color: #606266;
+}
+
+.message.assistant .bubble :deep(.md-p) {
+  margin: 8px 0;
+  line-height: 1.7;
+}
+
+.message.assistant .bubble :deep(.md-ul),
+.message.assistant .bubble :deep(.md-ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.message.assistant .bubble :deep(.md-li),
+.message.assistant .bubble :deep(.md-li-ordered) {
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+.message.assistant .bubble :deep(.inline-code) {
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
+  color: #e6a23c;
+}
+
+.message.assistant .bubble :deep(.code-block) {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.message.assistant .bubble :deep(.code-block code) {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.message.assistant .bubble :deep(.md-quote) {
+  border-left: 3px solid #909399;
+  background: #f5f5f5;
+  padding: 8px 12px;
+  margin: 8px 0;
+  color: #606266;
+  font-style: italic;
+}
+
+.message.assistant .bubble :deep(.md-hr) {
+  margin: 12px 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #dcdfe6, transparent);
+}
+
 .quick-questions {
   display: flex;
   gap: 10px;
@@ -286,28 +361,5 @@ function copyText(text) {
 .quick-tag:hover {
   background: #667eea;
   color: #fff;
-}
-
-.upload-area {
-  margin-bottom: 15px;
-}
-
-.ocr-result {
-  margin-top: 20px;
-  padding: 20px;
-  background: #f9f9f9;
-  border-radius: 10px;
-}
-
-.sentiment-section .el-button {
-  margin-top: 15px;
-}
-
-.sentiment-result {
-  text-align: center;
-  margin-top: 20px;
-  padding: 30px;
-  background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
-  border-radius: 15px;
 }
 </style>

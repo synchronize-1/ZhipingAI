@@ -77,7 +77,7 @@
                 <p>{{ currentWeekday }} · 共{{ todayCourses.length }}节课</p>
               </div>
             </div>
-            <el-button type="default" round @click="$router.push('/my-schedule')">
+            <el-button type="default" round @click="$router.push('/my-courses')">
               查看课表
               <el-icon class="el-icon--right"><ArrowRight /></el-icon>
             </el-button>
