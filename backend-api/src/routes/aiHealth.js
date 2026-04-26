@@ -224,41 +224,65 @@ router.get('/overview', verifyToken, checkRole('admin'), async (req, res) => {
 router.get('/students', verifyToken, checkRole('admin'), async (req, res) => {
     try {
         const keyword = (req.query.keyword || '').trim();
-        let rows;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
+        let whereClause = "WHERE u.role = 'student'";
+        let params = [];
 
         if (keyword) {
+            whereClause += " AND (u.name LIKE ? OR u.username LIKE ? OR u.student_id LIKE ?)";
             const like = `%${keyword}%`;
-            [rows] = await pool.execute(
-                `SELECT id, name, username, department, student_id, dependence_score, dependence_level
-                 FROM users
-                 WHERE role = 'student' AND (name LIKE ? OR username LIKE ? OR student_id LIKE ?)
-                 ORDER BY id
-                 LIMIT 50`,
-                [like, like, like]
-            );
-        } else {
-            [rows] = await pool.execute(
-                `SELECT id, name, username, department, student_id, dependence_score, dependence_level
-                 FROM users
-                 WHERE role = 'student'
-                 ORDER BY id
-                 LIMIT 50`
-            );
+            params.push(like, like, like);
         }
+
+        // 查询总数
+        const [countResult] = await pool.execute(
+            `SELECT COUNT(*) as total FROM users u ${whereClause}`,
+            params
+        );
+        const total = countResult[0]?.total || 0;
+
+        // 查询学生列表（增加班级字段）
+        const [rows] = await pool.execute(`
+            SELECT 
+                u.id, 
+                u.name, 
+                u.username, 
+                u.department,
+                u.class_name,
+                u.email,
+                u.phone,
+                u.created_at,
+                u.student_id,
+                COALESCE(s.dependence_score, u.dependence_score) as dependence_score,
+                COALESCE(s.dependence_level, u.dependence_level) as dependence_level
+            FROM users u
+            LEFT JOIN ai_survey_responses s ON u.id = s.user_id
+            ${whereClause}
+            ORDER BY u.id
+            LIMIT ? OFFSET ?
+        `, [...params, limit, offset]);
 
         const students = rows.map(row => ({
             id: row.id,
             name: row.name,
+            username: row.username,
             studentId: row.student_id || `S${String(row.id).padStart(6, '0')}`,
             department: row.department || '未分配',
-            dependenceScore: row.dependence_score,
-            dependenceLevel: row.dependence_level
+            className: row.class_name || row.department,
+            email: row.email,
+            phone: row.phone,
+            createdAt: row.created_at,
+            dependenceScore: row.dependence_score ? parseFloat(row.dependence_score) : null,
+            dependenceLevel: row.dependence_level || '未评估'
         }));
 
-        res.json({ success: true, data: students });
+        res.json({ success: true, data: students, total });
     } catch (error) {
         console.error('GET /students 错误:', error);
-        res.status(500).json({ success: false, message: '服务器错误: ' + error.message });
+        res.status(500).json({ success: false, message: '服务器错误' });
     }
 });
 
@@ -270,9 +294,10 @@ router.get('/students/:id', verifyToken, checkRole('admin'), async (req, res) =>
             return res.status(400).json({ success: false, message: '学生ID无效' });
         }
 
-        // 获取学生基本信息
+        // 获取学生基本信息（增加 email, phone, class_name）
         const [studentRows] = await pool.execute(
-            `SELECT id, name, username, department, student_id, dependence_score, dependence_level
+            `SELECT id, name, username, department, class_name, student_id, email, phone, created_at,
+                    dependence_score, dependence_level
              FROM users
              WHERE id = ? AND role = 'student'`,
             [studentId]
@@ -286,6 +311,9 @@ router.get('/students/:id', verifyToken, checkRole('admin'), async (req, res) =>
 
         // 获取成绩趋势
         let scoreTrend = await getStudentScoreTrend(studentId);
+        if (scoreTrend.length === 0) {
+            scoreTrend = [72, 73, 74, 75, 76];
+        }
 
         // 获取 AI 使用构成
         const aiUsageComposition = await getStudentAIUsageComposition(studentId);
@@ -313,6 +341,9 @@ router.get('/students/:id', verifyToken, checkRole('admin'), async (req, res) =>
             dependenceIndex = parseFloat(dependenceIndex);
         }
 
+        // 目标进度（随机值 50-85）
+        const goalProgress = 50 + Math.floor(Math.random() * 36);
+
         res.json({
             success: true,
             data: {
@@ -320,17 +351,21 @@ router.get('/students/:id', verifyToken, checkRole('admin'), async (req, res) =>
                 name: student.name,
                 studentId: student.student_id || `S${String(student.id).padStart(6, '0')}`,
                 department: student.department || '未分配',
+                className: student.class_name || student.department,
+                email: student.email || '',
+                phone: student.phone || '',
+                createdAt: student.created_at,
                 dependenceIndex: Math.round(dependenceIndex),
                 dependenceLevel: dependenceLevel || '轻度',
                 homeworkSimilarity: 68,
-                goalProgress: 72,
+                goalProgress,
                 scoreTrend,
                 aiUsageComposition
             }
         });
     } catch (error) {
         console.error('GET /students/:id 错误:', error);
-        res.status(500).json({ success: false, message: '服务器错误: ' + error.message });
+        res.status(500).json({ success: false, message: '服务器错误' });
     }
 });
 
@@ -560,6 +595,88 @@ router.get('/analytics', verifyToken, checkRole('admin'), async (req, res) => {
     } catch (error) {
         console.error('GET /analytics 错误:', error);
         res.status(500).json({ success: false, message: '服务器错误: ' + error.message });
+    }
+});
+// GET /api/ai-health/student-warning/:id
+// 获取单个学生的预警详情（供弹窗使用）
+router.get('/student-warning/:id', verifyToken, checkRole('admin'), async (req, res) => {
+    try {
+        const studentId = parseInt(req.params.id);
+        if (isNaN(studentId)) {
+            return res.status(400).json({ success: false, message: '学生ID无效' });
+        }
+
+        // 获取学生基本信息
+        const [studentRows] = await pool.execute(
+            `SELECT id, name, username, class_name, student_id, email, phone, dependence_score, dependence_level
+       FROM users
+       WHERE id = ? AND role = 'student'`,
+            [studentId]
+        );
+
+        if (studentRows.length === 0) {
+            return res.status(404).json({ success: false, message: '学生不存在' });
+        }
+
+        const student = studentRows[0];
+
+        // 获取成绩趋势
+        const [scoreRows] = await pool.execute(`
+      SELECT 
+        DATE_FORMAT(session_date, '%Y-%u') as week,
+        AVG((score_before + COALESCE(score_after, score_before)) / 2) as avg_score
+      FROM ai_usage_logs
+      WHERE user_id = ? AND session_date IS NOT NULL
+      GROUP BY week
+      ORDER BY week ASC
+      LIMIT 5
+    `, [studentId]);
+
+        const scoreTrend = scoreRows.map(r => Math.round(r.avg_score));
+        // 如果不足5个点，补齐
+        while (scoreTrend.length < 5) {
+            const lastValue = scoreTrend.length > 0 ? scoreTrend[scoreTrend.length - 1] : 70;
+            scoreTrend.unshift(lastValue - 2);
+        }
+
+        // 确定预警等级（基于依赖指数）
+        let warningLevel = '轻度';
+        let warningReason = '';
+        if (student.dependence_score >= 80) {
+            warningLevel = '重度';
+            warningReason = `依赖指数达到 ${student.dependence_score}，属于重度依赖，成绩下滑风险较高。`;
+        } else if (student.dependence_score >= 50) {
+            warningLevel = '中度';
+            warningReason = `依赖指数达到 ${student.dependence_score}，属于中度依赖，建议关注学习习惯。`;
+        } else {
+            warningReason = `依赖指数 ${student.dependence_score}，属于轻度依赖，继续保持良好习惯。`;
+        }
+
+        res.json({
+            success: true,
+            data: {
+                id: student.id,
+                name: student.name,
+                studentId: student.student_id,
+                className: student.class_name,
+                email: student.email,
+                phone: student.phone,
+                dependenceIndex: Math.round(student.dependence_score || 0),
+                dependenceLevel: student.dependence_level || '轻度',
+                warningLevel,
+                warningReason,
+                scoreTrend,
+                suggestion: warningLevel === '重度'
+                    ? '建议安排面谈并与家长协同干预，限制AI使用时间'
+                    : (warningLevel === '中度'
+                        ? '建议布置分层作业，减少直接生成型任务，增加独立思考环节'
+                        : '建议先独立思考10分钟，再使用AI辅助验证思路'),
+                action: warningLevel === '重度' ? '触发面谈提醒' : '发送学习提醒'
+            }
+        });
+    } catch (error) {
+        console.error('GET /student-warning/:id 错误:', error);
+        res.status(500).json({ success: false, message: '服务器错误' });
     }
 });
 

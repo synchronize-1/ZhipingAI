@@ -46,12 +46,6 @@ const routes = [
                 meta: { title: '管理员首页', icon: 'HomeFilled', roles: ['admin'] }
             },
             {
-                path: 'admin-health',
-                name: 'AIHealthDashboard',
-                component: () => import('@/views/ai-health/AIHealthDashboard.vue'),
-                meta: { title: 'AI健康评估', icon: 'DataAnalysis', roles: ['admin'] }
-            },
-            {
                 path: 'users',
                 name: 'Users',
                 component: () => import('@/views/Users.vue'),

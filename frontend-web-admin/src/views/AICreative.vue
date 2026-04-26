@@ -454,6 +454,7 @@ const clearMindmap = () => {
 
 const downloadPainting = () => {
   if (paintingResult.value?.imageUrl) {
+    alert("当前功能尚在开发中")
     window.open(paintingResult.value.imageUrl, '_blank')
   }
 }

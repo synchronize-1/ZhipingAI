@@ -17,8 +17,7 @@ router.get('/overview', verifyToken, checkRole('admin'), async (req, res) => {
         (SELECT COUNT(*) FROM users WHERE role = 'teacher') as total_teachers,
         (SELECT COUNT(*) FROM courses) as total_courses,
         (SELECT COUNT(*) FROM rooms) as total_rooms,
-        (SELECT COUNT(*) FROM activities WHERE status = 'upcoming') as upcoming_activities,
-        (SELECT COUNT(*) FROM repairs WHERE status = 'pending') as pending_repairs
+        (SELECT COUNT(*) FROM activities WHERE status = 'upcoming') as upcoming_activities
     `);
     
     res.json({ success: true, data: stats[0] });
@@ -66,6 +65,58 @@ router.get('/energy', verifyToken, checkRole('admin'), async (req, res) => {
   }
 });
 
+// GET /api/dashboard/ai-stats - AI使用统计
+// 添加 AI 健康统计接口
+router.get('/ai-stats', verifyToken, checkRole('admin'), async (req, res) => {
+    try {
+        const pool = require('../config/database');
+
+        // 今日活跃 AI 用户
+        const [activeUsers] = await pool.execute(`
+      SELECT COUNT(DISTINCT user_id) as count
+      FROM ai_usage_logs
+      WHERE session_date = CURDATE()
+    `);
+
+        // 总学生数
+        const [totalStudents] = await pool.execute(`
+      SELECT COUNT(*) as count FROM users WHERE role = 'student'
+    `);
+
+        // AI 工具覆盖率
+        const coverage = totalStudents[0]?.count > 0
+            ? (activeUsers[0]?.count / totalStudents[0]?.count * 100).toFixed(1)
+            : 0;
+
+        // 周 AI 使用时长
+        const [weeklyUsage] = await pool.execute(`
+      SELECT SUM(session_length_min) / 60 as total_hours
+      FROM ai_usage_logs
+      WHERE session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    `);
+
+        // 平均依赖指数
+        const [avgDependence] = await pool.execute(`
+      SELECT AVG(dependence_score) as avg_score
+      FROM ai_survey_responses
+    `);
+        // 或者从 users 表获取
+        // SELECT AVG(dependence_score) as avg_score FROM users WHERE role = 'student' AND dependence_score IS NOT NULL
+
+        res.json({
+            success: true,
+            data: {
+                todayActiveAIUsers: activeUsers[0]?.count || 0,
+                aiToolCoverage: parseFloat(coverage),
+                aiUsageHoursWeekly: Math.round(weeklyUsage[0]?.total_hours || 0),
+                avgDependenceScore: Math.round(avgDependence[0]?.avg_score || 58)
+            }
+        });
+    } catch (error) {
+        console.error('获取 AI 统计错误:', error);
+        res.status(500).json({ success: false, message: '服务器错误' });
+    }
+});
 // 人流热力图数据
 router.get('/heatmap', verifyToken, checkRole('admin'), async (req, res) => {
   try {
@@ -101,30 +152,6 @@ router.get('/heatmap', verifyToken, checkRole('admin'), async (req, res) => {
   }
 });
 
-// 网络负载数据
-router.get('/network', verifyToken, checkRole('admin'), async (req, res) => {
-  try {
-    const pool = require('../config/database');
-    
-    const [networkData] = await pool.execute(`
-      SELECT 
-        building,
-        AVG(bandwidth_usage) as avg_bandwidth,
-        MAX(bandwidth_usage) as peak_bandwidth,
-        AVG(latency) as avg_latency,
-        recorded_at
-      FROM network_logs
-      WHERE recorded_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-      GROUP BY building, HOUR(recorded_at)
-      ORDER BY recorded_at
-    `);
-    
-    res.json({ success: true, data: networkData });
-  } catch (error) {
-    console.error('获取网络负载错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
 
 // 出勤率统计
 router.get('/attendance', verifyToken, checkRole('admin', 'teacher'), async (req, res) => {
@@ -147,43 +174,6 @@ router.get('/attendance', verifyToken, checkRole('admin', 'teacher'), async (req
     res.json({ success: true, data: attendanceData });
   } catch (error) {
     console.error('获取出勤统计错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
-
-// 服务请求统计
-router.get('/service-stats', verifyToken, checkRole('admin'), async (req, res) => {
-  try {
-    const pool = require('../config/database');
-    
-    const [repairStats] = await pool.execute(`
-      SELECT 
-        status,
-        COUNT(*) as count,
-        category
-      FROM repairs
-      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY status, category
-    `);
-    
-    const [bookStats] = await pool.execute(`
-      SELECT 
-        status,
-        COUNT(*) as count
-      FROM book_borrowings
-      WHERE borrowed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-      GROUP BY status
-    `);
-    
-    res.json({ 
-      success: true, 
-      data: { 
-        repairs: repairStats,
-        books: bookStats
-      } 
-    });
-  } catch (error) {
-    console.error('获取服务统计错误:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

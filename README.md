@@ -201,7 +201,6 @@ SmartCampus/
 │   │   │   ├── auth.js           # 认证路由
 │   │   │   ├── user.js           # 用户管理
 │   │   │   ├── course.js         # 课程管理
-│   │   │   ├── schedule.js       # 课表管理
 │   │   │   ├── service.js        # 校园服务
 │   │   │   ├── aiAgent.js        # AI代理
 │   │   │   └── aiScience.js      # AI科学

@@ -1,3 +1,4 @@
+// useMarkdownRenderer.js
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github-dark.css'
@@ -16,14 +17,32 @@ marked.setOptions({
     gfm: true
 })
 
-// 清理文本中的乱码字符
+// 清理文本中的乱码字符和修复常见LaTeX问题
 const cleanText = (content) => {
     if (!content) return ''
-    // 移除各种乱码字符
-    return content
-        .replace(/�/g, '')           // 替换字符
-        .replace(/[\uFFFD]/g, '')    // Unicode 替换字符
-        .replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/g, '') // 控制字符
+
+    let cleaned = content
+        // 移除各种乱码字符
+        .replace(/�/g, '')
+        .replace(/[\uFFFD]/g, '')
+        .replace(/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/g, '')
+
+    return cleaned
+}
+
+// 预处理 LaTeX 公式，修复常见问题
+const fixLatexFormula = (formula) => {
+    if (!formula) return formula
+
+    // 关键修复：处理被转义的反斜杠
+    let fixed = formula
+        // 修复 \\[ 变成 \[（双反斜杠变单反斜杠）
+        .replace(/\\\\/g, '\\')
+        // 修复 \{ 和 \}
+        .replace(/\\{/g, '{')
+        .replace(/\\}/g, '}')
+
+    return fixed
 }
 
 // 渲染 Markdown 和 LaTeX
@@ -36,93 +55,64 @@ export const renderMarkdown = (content) => {
     // 处理块级公式 $$ ... $$
     rendered = rendered.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
         try {
-            return katex.renderToString(formula, {
+            const fixedFormula = fixLatexFormula(formula)
+            return katex.renderToString(fixedFormula, {
                 displayMode: true,
-                throwOnError: false
+                throwOnError: false,
+                strict: false,
+                output: 'html'
             })
         } catch (e) {
-            return match
+            console.warn('KaTeX 块级公式渲染失败:', e.message)
+            // 返回原始公式作为代码块
+            return `<div class="katex-error-block"><pre><code>${escapeHtml(formula)}</code></pre></div>`
         }
     })
 
     // 处理行内公式 $ ... $
     rendered = rendered.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
         try {
-            return katex.renderToString(formula, {
+            const fixedFormula = fixLatexFormula(formula)
+            return katex.renderToString(fixedFormula, {
                 displayMode: false,
-                throwOnError: false
+                throwOnError: false,
+                strict: false,
+                output: 'html'
             })
         } catch (e) {
-            return match
+            console.warn('KaTeX 行内公式渲染失败:', e.message)
+            // 返回原始公式作为行内代码
+            return `<code class="latex-inline">${escapeHtml(formula)}</code>`
         }
     })
 
     // 渲染 Markdown
-    return marked.parse(rendered)
+    try {
+        return marked.parse(rendered)
+    } catch (e) {
+        console.error('Markdown 渲染失败:', e)
+        // 如果 Markdown 渲染失败，用代码块包裹
+        return `<pre><code>${escapeHtml(rendered)}</code></pre>`
+    }
 }
 
-// 简单格式化的消息（用于聊天场景）
-export const formatChatMessage = (content) => {
-    if (!content) return ''
-
-    let formatted = cleanText(content)
-
-    // 1. 转义 HTML 特殊字符（防止 XSS）
-    formatted = formatted
+// HTML 转义
+const escapeHtml = (text) => {
+    if (!text) return ''
+    return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+}
 
-    // 2. 处理标题
-    formatted = formatted.replace(/^### (.*?)$/gm, '<h4 class="md-h4">$1</h4>')
-    formatted = formatted.replace(/^## (.*?)$/gm, '<h3 class="md-h3">$1</h3>')
-    formatted = formatted.replace(/^# (.*?)$/gm, '<h2 class="md-h2">$1</h2>')
+// 格式化聊天消息（优化版本）
+export const formatChatMessage = (content) => {
+    if (!content) return ''
 
-    // 3. 处理粗体
-    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    formatted = formatted.replace(/__(.*?)__/g, '<strong>$1</strong>')
-
-    // 4. 处理斜体
-    formatted = formatted.replace(/(?<!\*)\*([^\*]+)\*(?!\*)/g, '<em>$1</em>')
-    formatted = formatted.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>')
-
-    // 5. 处理行内代码
-    formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-
-    // 6. 处理代码块
-    formatted = formatted.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
-
-    // 7. 处理无序列表
-    formatted = formatted.replace(/^[\-\*]\s+(.*?)$/gm, '<li class="md-li">$1</li>')
-    formatted = formatted.replace(/(<li class="md-li">.*?<\/li>\n?)+/g, '<ul class="md-ul">$&</ul>')
-
-    // 8. 处理有序列表
-    formatted = formatted.replace(/^\d+\.\s+(.*?)$/gm, '<li class="md-li-ordered">$1</li>')
-    formatted = formatted.replace(/(<li class="md-li-ordered">.*?<\/li>\n?)+/g, '<ol class="md-ol">$&</ol>')
-
-    // 9. 处理引用
-    formatted = formatted.replace(/^>\s+(.*?)$/gm, '<blockquote class="md-quote">$1</blockquote>')
-
-    // 10. 处理分割线
-    formatted = formatted.replace(/^---$/gm, '<hr class="md-hr" />')
-    formatted = formatted.replace(/^\*\*\*$/gm, '<hr class="md-hr" />')
-
-    // 11. 处理换行
-    formatted = formatted.replace(/\n\n+/g, '</p><p class="md-p">')
-    formatted = formatted.replace(/\n/g, '<br/>')
-
-    // 12. 包裹段落
-    if (!formatted.startsWith('<h') && !formatted.startsWith('<ul') &&
-        !formatted.startsWith('<ol') && !formatted.startsWith('<pre') &&
-        !formatted.startsWith('<blockquote')) {
-        formatted = '<p class="md-p">' + formatted + '</p>'
-    }
-
-    // 13. 清理空段落
-    formatted = formatted.replace(/<p class="md-p"><br\/?><\/p>/g, '')
-    formatted = formatted.replace(/<p class="md-p">\s*<\/p>/g, '')
-
-    return formatted
+    // 直接使用 renderMarkdown，保持渲染一致性
+    return renderMarkdown(content)
 }
 
 // 复制文本
@@ -136,7 +126,7 @@ export const copyText = async (text) => {
     }
 }
 
-// 带提示的复制（需要在组件中传入 ElMessage）
+// 带提示的复制
 export const copyWithMessage = async (text, ElMessage) => {
     const success = await copyText(text)
     if (success && ElMessage) {

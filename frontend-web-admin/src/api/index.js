@@ -63,28 +63,16 @@ export default {
   },
   // 服务模块
   services: {
-    repairs: () => request.get('/services/repairs/my'),
     createRepair: data => request.post('/services/repairs', data),
     books: params => request.get('/services/books', { params }),
     borrowBook: id => request.post(`/services/books/${id}/borrow`),
     canteens: () => request.get('/services/canteens'),
     canteenCrowd: () => request.get('/services/canteens/crowd'),
     menu: id => request.get(`/services/canteens/${id}/menu`),
-    equipments: params => request.get('/services/equipments', { params })
-  },
-
-  security: {
-    attendance: params => request.get('/security/attendance/statistics', { params }),
-    courseAttendance: (id, params) => request.get(`/security/attendance/course/${id}`, { params }),
-    accessLogs: params => request.get('/security/access-logs', { params }),
-    emergencyNotices: () => request.get('/security/emergency-notices'),
-    createEmergency: data => request.post('/security/emergency-notices', data),
-    energy: params => request.get('/security/energy', { params }),
-    energyStats: params => request.get('/security/energy/statistics', { params }),
-    greenTips: () => request.get('/security/green-tips')
   },
   dashboard: {
-    overview: () => request.get('/dashboard/overview')
+    overview: () => request.get('/dashboard/overview'),
+    aiStats: () => request.get('/dashboard/ai-stats')
   },
   // 成长模块
   social: {
@@ -98,7 +86,6 @@ export default {
     create: data => request.post('/notifications', data),
     delete: id => request.delete(`/notifications/${id}`),
     reminderSettings: () => request.get('/notifications/reminder-settings'),
-    updateReminderSettings: data => request.put('/notifications/reminder-settings', data)
   },
   // //数据库连接时的真实情况
   // //AI健康评估模块（核心）
