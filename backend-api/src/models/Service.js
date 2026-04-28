@@ -1,64 +1,63 @@
+// backend-api/src/models/Services.js
 const pool = require('../config/database');
 
 class Service {
-  // ========== 报修服务 ==========
-  static async createRepair(repairData) {
-    const { userId, title, description, location, category, images, urgency } = repairData;
-    
-    const [result] = await pool.execute(
-      `INSERT INTO repairs (user_id, title, description, location, category, images, urgency, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())`,
-      [userId, title, description, location, category, JSON.stringify(images), urgency]
-    );
-    
-    return result.insertId;
-  }
-
-  static async getRepairsByUserId(userId) {
-    const [rows] = await pool.execute(
-      'SELECT * FROM repairs WHERE user_id = ? ORDER BY created_at DESC',
-      [userId]
-    );
-    return rows;
-  }
-
-  static async updateRepairStatus(repairId, status, handlerId = null, remark = null) {
-    await pool.execute(
-      'UPDATE repairs SET status = ?, handler_id = ?, remark = ?, updated_at = NOW() WHERE id = ?',
-      [status, handlerId, remark, repairId]
-    );
-  }
-
   // ========== 图书借阅 ==========
-  static async getBooks(page = 1, limit = 10, keyword = null, category = null) {
-    const pageNum = parseInt(page) || 1;
-    const limitNum = parseInt(limit) || 10;
-    const offset = (pageNum - 1) * limitNum;
-    let query = 'SELECT * FROM books WHERE 1=1';
-    let countQuery = 'SELECT COUNT(*) as total FROM books WHERE 1=1';
-    const params = [];
-    
-    if (keyword) {
-      query += ' AND (title LIKE ? OR author LIKE ?)';
-      countQuery += ' AND (title LIKE ? OR author LIKE ?)';
-      params.push(`%${keyword}%`, `%${keyword}%`);
+    static async getBooks(page = 1, limit = 10, keyword = null, category = null) {
+        try {
+            const pageNum = parseInt(page) || 1;
+            const limitNum = parseInt(limit) || 10;
+            const offset = (pageNum - 1) * limitNum;
+
+            let query = 'SELECT * FROM books WHERE 1=1';
+            let countQuery = 'SELECT COUNT(*) as total FROM books WHERE 1=1';
+            const params = [];
+            const countParams = [];
+
+            if (keyword && keyword.trim()) {
+                query += ' AND (title LIKE ? OR author LIKE ?)';
+                countQuery += ' AND (title LIKE ? OR author LIKE ?)';
+                const likePattern = `%${keyword.trim()}%`;
+                params.push(likePattern, likePattern);
+                countParams.push(likePattern, likePattern);
+            }
+
+            if (category && category.trim()) {
+                query += ' AND category = ?';
+                countQuery += ' AND category = ?';
+                params.push(category.trim());
+                countParams.push(category.trim());
+            }
+
+            // 修复：使用 LIMIT ?, ? 语法（MySQL 标准语法）
+            query += ' ORDER BY created_at DESC LIMIT ?, ?';
+            // 参数顺序：LIMIT offset, limitNum
+            params.push(offset, limitNum);
+
+            console.log('SQL Query:', query);
+            console.log('Params:', params);
+
+            // 使用 query 方法而不是 execute（execute 对 LIMIT 参数有时会有问题）
+            const [rows] = await pool.query(query, params);
+            const [countResult] = await pool.query(countQuery, countParams);
+
+            return {
+                data: rows,
+                total: countResult[0]?.total || 0,
+                page: pageNum,
+                limit: limitNum
+            };
+        } catch (error) {
+            console.error('getBooks 错误:', error);
+            // 返回空数据，避免前端崩溃
+            return {
+                data: [],
+                total: 0,
+                page: parseInt(page) || 1,
+                limit: parseInt(limit) || 10
+            };
+        }
     }
-    
-    if (category) {
-      query += ' AND category = ?';
-      countQuery += ' AND category = ?';
-      params.push(category);
-    }
-    
-    const countParams = [...params];
-    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
-    params.push(limitNum, offset);
-    
-    const [rows] = await pool.execute(query, params);
-    const [countResult] = await pool.execute(countQuery, countParams);
-    
-    return { data: rows, total: countResult[0].total, page, limit };
-  }
 
   static async borrowBook(userId, bookId) {
     const dueDate = new Date();
@@ -87,30 +86,6 @@ class Service {
     if (borrowing[0]) {
       await pool.execute('UPDATE books SET available_count = available_count + 1 WHERE id = ?', [borrowing[0].book_id]);
     }
-  }
-
-  // ========== 设备预约 ==========
-  static async getEquipments(category = null) {
-    let query = 'SELECT * FROM equipments WHERE status = "available"';
-    const params = [];
-    
-    if (category) {
-      query += ' AND category = ?';
-      params.push(category);
-    }
-    
-    const [rows] = await pool.execute(query, params);
-    return rows;
-  }
-
-  static async reserveEquipment(userId, equipmentId, startTime, endTime, purpose) {
-    const [result] = await pool.execute(
-      `INSERT INTO equipment_reservations (user_id, equipment_id, start_time, end_time, purpose, status, created_at)
-       VALUES (?, ?, ?, ?, ?, 'pending', NOW())`,
-      [userId, equipmentId, startTime, endTime, purpose]
-    );
-    
-    return result.insertId;
   }
 
   // ========== 食堂服务 ==========

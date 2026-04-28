@@ -126,52 +126,6 @@
               </div>
             </el-popover>
 
-            <!-- 校园实时数据模块 -->
-            <el-popover placement="bottom" :width="360" trigger="click">
-              <template #reference>
-                <div class="campus-status-cool">
-                  <span class="status-dot-cool" :class="systemStatus.dotClass"></span>
-                  <div class="campus-status-info">
-                    <div class="campus-status-label">校园状态</div>
-                    <div class="campus-status-value">{{ campusRealtime.onlineCount }} 人在线</div>
-                  </div>
-                </div>
-              </template>
-              <div class="campus-realtime-panel">
-                <div class="panel-header">校园实时数据</div>
-                <div class="realtime-grid">
-                  <div class="realtime-item">
-                    <div class="realtime-icon bg-blue-500"><el-icon><User /></el-icon></div>
-                    <div class="realtime-info">
-                      <div class="realtime-value">{{ campusRealtime.onlineCount }}</div>
-                      <div class="realtime-label">在线人数</div>
-                    </div>
-                  </div>
-                  <div class="realtime-item">
-                    <div class="realtime-icon bg-green-500"><el-icon><OfficeBuilding /></el-icon></div>
-                    <div class="realtime-info">
-                      <div class="realtime-value">{{ campusRealtime.activeRooms }}</div>
-                      <div class="realtime-label">使用中教室</div>
-                    </div>
-                  </div>
-                  <div class="realtime-item">
-                    <div class="realtime-icon bg-orange-500"><el-icon><Bowl /></el-icon></div>
-                    <div class="realtime-info">
-                      <div class="realtime-value">{{ campusRealtime.canteenCrowd }}%</div>
-                      <div class="realtime-label">食堂人流</div>
-                    </div>
-                  </div>
-                  <div class="realtime-item">
-                    <div class="realtime-icon bg-purple-500"><el-icon><Reading /></el-icon></div>
-                    <div class="realtime-info">
-                      <div class="realtime-value">{{ campusRealtime.libraryCount }}</div>
-                      <div class="realtime-label">图书馆人数</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="text-xs text-gray-400 text-center mt-3">每30秒自动更新</div>
-              </div>
-            </el-popover>
           </div>
 
           <!-- 右侧：通知和全屏 -->
@@ -188,7 +142,7 @@
       <div class="p-6">
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications', 'Security']">
+            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications']">
               <component :is="Component" :key="route.path" />
             </keep-alive>
           </transition>
@@ -214,7 +168,6 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const sidebarOpen = ref(true)
-const searchQuery = ref('')
 const unreadCount = ref(0)
 const greeting = ref('')
 const currentDate = ref('')
@@ -259,11 +212,11 @@ const springWeatherDatabase = [
 // 根据天气返回图标
 const weatherIcon = computed(() => {
   const desc = weather.value.description
-  if (desc.includes('晴')) return 'Sunny'
-  if (desc.includes('雨')) return 'Drizzling'
-  if (desc.includes('阴') || desc.includes('多云')) return 'Cloudy'
-  if (desc.includes('浮尘') || desc.includes('沙尘')) return 'WindPower'
-  return 'Cloudy'
+  if (desc.includes('晴')) return Sunny
+  if (desc.includes('雨')) return Drizzling
+  if (desc.includes('阴') || desc.includes('多云')) return Cloudy
+  if (desc.includes('浮尘') || desc.includes('沙尘')) return WindPower
+  return Cloudy
 })
 
 // 校园实时数据
@@ -274,12 +227,6 @@ const campusRealtime = ref({
   libraryCount: 328
 })
 
-const systemStatus = ref({
-  text: '在线',
-  class: 'status-online',
-  dotClass: 'dot-online'
-})
-
 const menuItems = computed(() => {
   const role = userStore.user?.role || 'student'
 
@@ -287,27 +234,28 @@ const menuItems = computed(() => {
   const allMenus = [
     { path: '/', title: '数据大屏', icon: 'DataAnalysis', roles: ['admin'] },
     { path: '/home', title: '首页', icon: 'HomeFilled', roles: ['student', 'teacher', 'admin'] },
+    // { path: '/admin-health', title: 'AI健康评估', icon: 'DataAnalysis', roles: ['admin'] },
+    { path: '/ai-science', title: '科普实战乐园', icon: 'MagicStick', roles: ['student', 'teacher', 'admin'] },
     { path: '/users', title: '用户管理', icon: 'User', roles: ['admin'] },
     { path: '/courses', title: '课程管理', icon: 'Reading', roles: ['teacher', 'admin'] },
-    { path: '/my-courses', title: '我的课程', icon: 'Reading', roles: ['student'] },
-    { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },
-    { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },
-    { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
-    { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
-    { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },
-    { path: '/my-attendance', title: '我的考勤', icon: 'Checked', roles: ['student'] },
-    { path: '/services', title: '校园服务', icon: 'Service', roles: ['student', 'teacher', 'admin'] },
-    { path: '/activities', title: '校园活动', icon: 'Flag', roles: ['student', 'teacher', 'admin'] },
-    { path: '/growth', title: '成长档案', icon: 'TrendCharts', roles: ['student'] },
+    // { path: '/my-courses', title: '我的课程', icon: 'Reading', roles: ['student'] },
+    // { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },   //管理员：课程管理
+    // { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },         //学生：我的课表
+    // { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
+    // { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
+    // { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },
+    // { path: '/my-attendance', title: '我的考勤', icon: 'Checked', roles: ['student'] },
+    // { path: '/services', title: '校园服务', icon: 'Service', roles: ['student', 'teacher', 'admin'] },
+    // { path: '/activities', title: '校园活动', icon: 'Flag', roles: ['student', 'teacher', 'admin'] },
+    // { path: '/growth', title: '成长档案', icon: 'TrendCharts', roles: ['student'] },
     { path: '/learning', title: '学习资源', icon: 'Reading', roles: ['student'] },
     { path: '/ai-learning', title: 'AI学习助手', icon: 'Reading', roles: ['student'] },
     { path: '/ai-writing', title: 'AI写作助手', icon: 'EditPen', roles: ['student'] },
     { path: '/ai-ocr', title: 'AI智能识别', icon: 'Camera', roles: ['student'] },
     { path: '/ai-creative', title: 'AI创意工具', icon: 'Picture', roles: ['student'] },
     { path: '/ai-sentiment', title: 'AI情感分析', icon: 'Sunny', roles: ['student'] },
-    { path: '/ai-science', title: 'AI科普乐园', icon: 'MagicStick', roles: ['student', 'teacher', 'admin'] },
-    { path: '/energy', title: '能耗监测', icon: 'Odometer', roles: ['admin'] },
-    { path: '/security', title: '安全管理', icon: 'Lock', roles: ['admin'] },
+    // { path: '/energy', title: '能耗监测', icon: 'Odometer', roles: ['admin'] },
+    // { path: '/security', title: '安全管理', icon: 'Lock', roles: ['admin'] },
     { path: '/notifications', title: '通知中心', icon: 'Bell', roles: ['student', 'teacher', 'admin'] },
     { path: '/profile', title: '个人设置', icon: 'Setting', roles: ['student', 'teacher', 'admin'] }
   ]
@@ -563,19 +511,20 @@ onUnmounted(() => {
 
 /* ========== 侧边栏样式 ========== */
 .sidebar-gradient {
-  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
-  box-shadow: 4px 0 24px rgba(79, 70, 229, 0.3);
+  background: linear-gradient(180deg, #2c5f8a 0%, #1e4a6e 50%, #1a3f5f 100%);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
 }
 
 .sidebar-logo {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
 }
 
+/* 标题渐变改为白色 */
 .logo-glow {
-  background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), 0 0 40px rgba(6, 182, 212, 0.3);
-  animation: logoGlow 3s ease-in-out infinite;
+  background: linear-gradient(135deg, #5aa9dd 0%, #3b82f6 100%);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
+
 
 @keyframes logoGlow {
   0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.5), 0 0 40px rgba(6, 182, 212, 0.3); }
@@ -597,21 +546,21 @@ onUnmounted(() => {
   background: linear-gradient(90deg, rgba(139, 92, 246, 0.3) 0%, transparent 100%);
 }
 
+/* 导航项激活状态 - 保持清晰 */
 .nav-item-active {
-  color: white;
-  background: linear-gradient(90deg, rgba(6, 182, 212, 0.6) 0%, rgba(139, 92, 246, 0.4) 50%, transparent 100%);
-  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
-  border-left: 3px solid #06b6d4;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 0.2) 50%, transparent 100%);
+  border-left: 3px solid #3b82f6;
 }
+
 
 .nav-indicator {
   position: absolute;
   right: 12px;
   width: 6px;
   height: 6px;
-  background: #06b6d4;
+  background: #3b82f6;
   border-radius: 50%;
-  box-shadow: 0 0 10px #06b6d4;
+  box-shadow: 0 0 10px #3b82f6;
   animation: indicatorPulse 1.5s ease-in-out infinite;
 }
 

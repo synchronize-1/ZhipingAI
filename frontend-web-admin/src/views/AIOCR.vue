@@ -9,10 +9,6 @@
             <p>拍照识字，智能提取文本内容</p>
           </div>
         </div>
-        <el-button type="primary" @click="showHistory = true">
-          <el-icon><Clock /></el-icon>
-          识别历史
-        </el-button>
       </div>
     </div>
 
@@ -30,12 +26,12 @@
 
               <div class="upload-section">
                 <el-upload
-                  class="upload-area"
-                  drag
-                  :auto-upload="false"
-                  :on-change="handleQuestionUpload"
-                  :show-file-list="false"
-                  accept="image/*"
+                    class="upload-area"
+                    drag
+                    :auto-upload="false"
+                    :on-change="handleQuestionUpload"
+                    :show-file-list="false"
+                    accept="image/*"
                 >
                   <div v-if="!questionImage" class="upload-placeholder">
                     <el-icon class="upload-icon"><UploadFilled /></el-icon>
@@ -55,11 +51,11 @@
                 </el-upload>
 
                 <div class="action-buttons" v-if="questionImage">
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="recognizeQuestion"
-                    :loading="questionLoading"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="recognizeQuestion"
+                      :loading="questionLoading"
                   >
                     <el-icon><MagicStick /></el-icon>
                     开始识别并解答
@@ -82,21 +78,17 @@
                     <el-icon><CircleCheck /></el-icon>
                     <h4>AI解答</h4>
                   </div>
-                  <div class="section-content" v-html="formatResult(questionResult.answer)"></div>
+                  <div class="section-content markdown-body" v-html="renderMarkdown(questionResult.answer)"></div>
                 </div>
 
                 <div class="result-actions">
-                  <el-button @click="copyResult(questionResult.text)">
+                  <el-button @click="copyWithMessage(questionResult.text, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制题目
                   </el-button>
-                  <el-button @click="copyResult(questionResult.answer)" v-if="questionResult.answer">
+                  <el-button @click="copyWithMessage(questionResult.answer, ElMessage)" v-if="questionResult.answer">
                     <el-icon><DocumentCopy /></el-icon>
                     复制解答
-                  </el-button>
-                  <el-button @click="saveToErrorBook">
-                    <el-icon><FolderAdd /></el-icon>
-                    加入题库
                   </el-button>
                 </div>
               </div>
@@ -116,12 +108,12 @@
 
               <div class="upload-section">
                 <el-upload
-                  class="upload-area"
-                  drag
-                  :auto-upload="false"
-                  :on-change="handleNoteUpload"
-                  :show-file-list="false"
-                  accept="image/*"
+                    class="upload-area"
+                    drag
+                    :auto-upload="false"
+                    :on-change="handleNoteUpload"
+                    :show-file-list="false"
+                    accept="image/*"
                 >
                   <div v-if="!noteImage" class="upload-placeholder">
                     <el-icon class="upload-icon"><UploadFilled /></el-icon>
@@ -141,11 +133,11 @@
                 </el-upload>
 
                 <div class="action-buttons" v-if="noteImage">
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="recognizeNote"
-                    :loading="noteLoading"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="recognizeNote"
+                      :loading="noteLoading"
                   >
                     <el-icon><MagicStick /></el-icon>
                     开始识别
@@ -162,24 +154,16 @@
                 </div>
                 <div class="result-content note-content">
                   <el-input
-                    v-model="noteResult.text"
-                    type="textarea"
-                    :rows="15"
-                    placeholder="识别的文本内容"
+                      v-model="noteResult.text"
+                      type="textarea"
+                      :rows="15"
+                      placeholder="识别的文本内容"
                   />
                 </div>
                 <div class="result-actions">
-                  <el-button type="primary" @click="saveNote">
-                    <el-icon><FolderAdd /></el-icon>
-                    保存笔记
-                  </el-button>
-                  <el-button @click="copyResult(noteResult.text)">
+                  <el-button @click="copyWithMessage(noteResult.text, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制文本
-                  </el-button>
-                  <el-button @click="exportNote">
-                    <el-icon><Download /></el-icon>
-                    导出文档
                   </el-button>
                 </div>
               </div>
@@ -199,13 +183,13 @@
 
               <div class="upload-section">
                 <el-upload
-                  class="upload-area"
-                  drag
-                  :auto-upload="false"
-                  :on-change="handleDocUpload"
-                  :show-file-list="false"
-                  accept="image/*"
-                  multiple
+                    class="upload-area"
+                    drag
+                    :auto-upload="false"
+                    :on-change="handleDocUpload"
+                    :show-file-list="false"
+                    accept="image/*"
+                    multiple
                 >
                   <div v-if="docImages.length === 0" class="upload-placeholder">
                     <el-icon class="upload-icon"><UploadFilled /></el-icon>
@@ -218,12 +202,12 @@
                     <div v-for="(img, index) in docImages" :key="index" class="preview-item">
                       <img :src="img.url" :alt="`文档页${index + 1}`" />
                       <div class="image-number">{{ index + 1 }}</div>
-                      <el-button 
-                        type="danger" 
-                        circle 
-                        size="small"
-                        class="delete-btn"
-                        @click.stop="removeDocImage(index)"
+                      <el-button
+                          type="danger"
+                          circle
+                          size="small"
+                          class="delete-btn"
+                          @click.stop="removeDocImage(index)"
                       >
                         <el-icon><Close /></el-icon>
                       </el-button>
@@ -236,11 +220,11 @@
                 </el-upload>
 
                 <div class="action-buttons" v-if="docImages.length > 0">
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="recognizeDocument"
-                    :loading="docLoading"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="recognizeDocument"
+                      :loading="docLoading"
                   >
                     <el-icon><MagicStick /></el-icon>
                     开始扫描（{{ docImages.length }}页）
@@ -262,17 +246,9 @@
                   </div>
                 </div>
                 <div class="result-actions">
-                  <el-button type="primary" @click="saveDocument">
-                    <el-icon><FolderAdd /></el-icon>
-                    保存文档
-                  </el-button>
                   <el-button @click="copyAllPages">
                     <el-icon><DocumentCopy /></el-icon>
                     复制全部
-                  </el-button>
-                  <el-button @click="exportDocument">
-                    <el-icon><Download /></el-icon>
-                    导出PDF
                   </el-button>
                 </div>
               </div>
@@ -292,12 +268,12 @@
 
               <div class="upload-section">
                 <el-upload
-                  class="upload-area"
-                  drag
-                  :auto-upload="false"
-                  :on-change="handleFormulaUpload"
-                  :show-file-list="false"
-                  accept="image/*"
+                    class="upload-area"
+                    drag
+                    :auto-upload="false"
+                    :on-change="handleFormulaUpload"
+                    :show-file-list="false"
+                    accept="image/*"
                 >
                   <div v-if="!formulaImage" class="upload-placeholder">
                     <el-icon class="upload-icon"><UploadFilled /></el-icon>
@@ -317,11 +293,11 @@
                 </el-upload>
 
                 <div class="action-buttons" v-if="formulaImage">
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="recognizeFormula"
-                    :loading="formulaLoading"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="recognizeFormula"
+                      :loading="formulaLoading"
                   >
                     <el-icon><MagicStick /></el-icon>
                     开始识别
@@ -336,7 +312,7 @@
                     <el-icon><Document /></el-icon>
                     <h4>识别的公式</h4>
                   </div>
-                  <div class="section-content formula-display">{{ formulaResult.text }}</div>
+                  <div class="section-content formula-display markdown-body" v-html="renderMarkdown(formulaResult.text)"></div>
                 </div>
 
                 <div class="result-section">
@@ -346,22 +322,18 @@
                   </div>
                   <div class="section-content">
                     <el-input
-                      v-model="formulaResult.latex"
-                      type="textarea"
-                      :rows="3"
-                      readonly
+                        v-model="formulaResult.latex"
+                        type="textarea"
+                        :rows="3"
+                        readonly
                     />
                   </div>
                 </div>
 
                 <div class="result-actions">
-                  <el-button @click="copyResult(formulaResult.latex)">
+                  <el-button @click="copyWithMessage(formulaResult.latex, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制LaTeX
-                  </el-button>
-                  <el-button @click="explainFormula">
-                    <el-icon><QuestionFilled /></el-icon>
-                    AI讲解公式
                   </el-button>
                 </div>
               </div>
@@ -370,38 +342,18 @@
         </el-tab-pane>
       </el-tabs>
     </div>
-
-    <!-- 识别历史对话框 -->
-    <el-dialog v-model="showHistory" title="识别历史" width="700px">
-      <el-empty v-if="historyList.length === 0" description="暂无识别历史" />
-      <el-timeline v-else>
-        <el-timeline-item 
-          v-for="item in historyList" 
-          :key="item.id"
-          :timestamp="item.time"
-          placement="top"
-        >
-          <el-card>
-            <div class="history-item">
-              <div class="history-type">{{ item.type }}</div>
-              <div class="history-content">{{ item.preview }}</div>
-              <el-button size="small" @click="viewHistory(item)">查看详情</el-button>
-            </div>
-          </el-card>
-        </el-timeline-item>
-      </el-timeline>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
+import { renderMarkdown, copyWithMessage } from '@/composables/useMarkdownRenderer'
+
+const API_BASE = 'http://localhost:3000/api/ai-science'
 
 const activeTab = ref('question')
-const showHistory = ref(false)
-const historyList = ref([])
 
 const questionImage = ref(null)
 const questionImageUrl = ref('')
@@ -451,17 +403,17 @@ const recognizeQuestion = async () => {
     reader.readAsDataURL(questionImage.value)
     reader.onload = async () => {
       const base64 = reader.result.split(',')[1]
-      
-      const response = await axios.post('/api/ai-science/ocr', {
-        image: base64
+
+      const response = await axios.post(`${API_BASE}/ocr`, {
+        imageBase64: base64
       })
 
       if (response.data.success) {
         const text = response.data.data.text
         questionResult.value = { text }
 
-        const answerResponse = await axios.post('/api/ai-science/chat', {
-          message: `请帮我解答这道题目：\n\n${text}`
+        const answerResponse = await axios.post(`${API_BASE}/chat`, {
+          message: `请帮我解答这道题目，请用Markdown格式输出，如果有数学公式请用LaTeX格式（行内公式用$...$，块级公式用$$...$$）：\n\n${text}`
         })
 
         if (answerResponse.data.success) {
@@ -488,9 +440,9 @@ const recognizeNote = async () => {
     reader.readAsDataURL(noteImage.value)
     reader.onload = async () => {
       const base64 = reader.result.split(',')[1]
-      
-      const response = await axios.post('/api/ai-science/ocr', {
-        image: base64
+
+      const response = await axios.post(`${API_BASE}/ocr`, {
+        imageBase64: base64
       })
 
       if (response.data.success) {
@@ -523,8 +475,8 @@ const recognizeDocument = async () => {
         reader.readAsDataURL(docImages.value[i].file)
         reader.onload = async () => {
           const base64 = reader.result.split(',')[1]
-          const response = await axios.post('/api/ai-science/ocr', {
-            image: base64
+          const response = await axios.post(`${API_BASE}/ocr`, {
+            imageBase64: base64
           })
           resolve(response.data)
         }
@@ -555,15 +507,14 @@ const recognizeFormula = async () => {
   formulaLoading.value = true
   try {
     ElMessage.info('正在识别公式...')
-    
+
     const reader = new FileReader()
     reader.readAsDataURL(formulaImage.value)
     reader.onload = async () => {
       const base64 = reader.result.split(',')[1]
-      
-      // 第一步：OCR识别公式文字
-      const ocrResponse = await axios.post('/api/ai-science/ocr', {
-        image: base64
+
+      const ocrResponse = await axios.post(`${API_BASE}/ocr`, {
+        imageBase64: base64
       })
 
       if (!ocrResponse.data.success) {
@@ -571,11 +522,10 @@ const recognizeFormula = async () => {
       }
 
       const ocrText = ocrResponse.data.data.text
-      
-      // 第二步：让AI解析公式并生成LaTeX格式
+
       ElMessage.info('正在生成LaTeX格式...')
-      
-      const aiResponse = await axios.post('/api/ai-science/chat', {
+
+      const aiResponse = await axios.post(`${API_BASE}/chat`, {
         message: `请将以下OCR识别的数学公式转换为标准LaTeX格式。
 
 OCR识别结果：
@@ -597,17 +547,16 @@ $$\\iiint_V (\\nabla \\cdot \\mathbf{F}) dV = \\iint_S \\mathbf{F} \\cdot d\\mat
 
       if (aiResponse.data.success) {
         const aiText = aiResponse.data.data.reply.trim()
-        
+
         formulaResult.value = {
           text: ocrText,
           latex: aiText
         }
         ElMessage.success('公式识别完成！')
       } else {
-        // 如果AI解析失败，使用简单格式
         formulaResult.value = {
           text: ocrText,
-          latex: `$${ocrText}$`
+          latex: `$$${ocrText}$$`
         }
         ElMessage.warning('LaTeX生成失败，显示原始文本')
       }
@@ -669,169 +618,9 @@ const clearFormula = () => {
   formulaResult.value = null
 }
 
-const formatResult = (text) => {
-  return text
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-}
-
-const copyResult = (text) => {
-  navigator.clipboard.writeText(text)
-  ElMessage.success('已复制到剪贴板')
-}
-
 const copyAllPages = () => {
   const allText = docResult.value.pageTexts.join('\n\n')
-  copyResult(allText)
-}
-
-const saveToErrorBook = () => {
-  ElMessage.success('已加入题库')
-}
-
-const saveNote = () => {
-  ElMessage.success('笔记已保存')
-}
-
-const exportNote = () => {
-  ElMessage.info('文档导出功能开发中...')
-}
-
-const saveDocument = () => {
-  ElMessage.success('文档已保存')
-}
-
-const exportDocument = async () => {
-  try {
-    ElMessage.info('正在生成PDF...')
-    
-    // 动态导入jspdf库
-    const { jsPDF } = await import('jspdf')
-    
-    // 创建PDF文档
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    })
-    
-    // 设置字体（使用默认字体，因为中文字体需要额外配置）
-    doc.setFontSize(12)
-    
-    let yPosition = 20
-    const pageHeight = doc.internal.pageSize.height
-    const margin = 20
-    const lineHeight = 7
-    const maxWidth = doc.internal.pageSize.width - 2 * margin
-    
-    // 添加标题
-    doc.setFontSize(16)
-    doc.text('文档扫描结果', margin, yPosition)
-    yPosition += 10
-    
-    doc.setFontSize(10)
-    doc.text(`总字数: ${docResult.value.totalWords} | 总页数: ${docResult.value.pages}`, margin, yPosition)
-    yPosition += 10
-    
-    // 添加分隔线
-    doc.line(margin, yPosition, doc.internal.pageSize.width - margin, yPosition)
-    yPosition += 10
-    
-    // 添加每页内容
-    doc.setFontSize(12)
-    docResult.value.pageTexts.forEach((pageText, index) => {
-      // 检查是否需要新页面
-      if (yPosition > pageHeight - 30) {
-        doc.addPage()
-        yPosition = 20
-      }
-      
-      // 页面标题
-      doc.setFontSize(14)
-      doc.text(`第 ${index + 1} 页`, margin, yPosition)
-      yPosition += lineHeight
-      
-      doc.setFontSize(10)
-      
-      // 将文本按行分割并添加到PDF
-      // 注意：jsPDF对中文支持有限，这里使用简单的文本输出
-      // 如果需要更好的中文支持，需要添加中文字体
-      const lines = doc.splitTextToSize(pageText, maxWidth)
-      
-      lines.forEach(line => {
-        if (yPosition > pageHeight - 20) {
-          doc.addPage()
-          yPosition = 20
-        }
-        doc.text(line, margin, yPosition)
-        yPosition += lineHeight
-      })
-      
-      yPosition += 5 // 页面间距
-    })
-    
-    // 保存PDF
-    const fileName = `文档扫描_${new Date().getTime()}.pdf`
-    doc.save(fileName)
-    
-    ElMessage.success('PDF导出成功！')
-  } catch (error) {
-    console.error('PDF导出错误:', error)
-    
-    // 如果jspdf未安装，提供文本导出作为备选方案
-    if (error.message.includes('Cannot find module')) {
-      ElMessage.warning('PDF库未安装，使用文本导出...')
-      exportAsText()
-    } else {
-      ElMessage.error('PDF导出失败，请重试')
-    }
-  }
-}
-
-// 备选方案：导出为文本文件
-const exportAsText = () => {
-  try {
-    let content = `文档扫描结果\n`
-    content += `总字数: ${docResult.value.totalWords} | 总页数: ${docResult.value.pages}\n`
-    content += `${'='.repeat(50)}\n\n`
-    
-    docResult.value.pageTexts.forEach((pageText, index) => {
-      content += `第 ${index + 1} 页\n`
-      content += `${'-'.repeat(50)}\n`
-      content += `${pageText}\n\n`
-    })
-    
-    // 创建Blob并下载
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `文档扫描_${new Date().getTime()}.txt`
-    link.click()
-    URL.revokeObjectURL(url)
-    
-    ElMessage.success('文本文件导出成功！')
-  } catch (error) {
-    console.error('文本导出错误:', error)
-    ElMessage.error('导出失败，请重试')
-  }
-}
-
-const explainFormula = async () => {
-  try {
-    const response = await axios.post('/api/ai-science/chat', {
-      message: `请讲解这个数学公式的含义和应用：${formulaResult.value.text}`
-    })
-    if (response.data.success) {
-      ElMessage.success('已生成讲解，请在AI助手中查看')
-    }
-  } catch (error) {
-    ElMessage.error('讲解生成失败')
-  }
-}
-
-const viewHistory = (item) => {
-  ElMessage.info('历史详情功能开发中...')
+  copyWithMessage(allText, ElMessage)
 }
 </script>
 
@@ -1176,22 +965,41 @@ const viewHistory = (item) => {
   justify-content: center;
 }
 
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+/* Markdown 样式 */
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4) {
+  margin-top: 16px;
+  margin-bottom: 8px;
 }
 
-.history-type {
-  font-weight: 600;
-  color: #4facfe;
+.markdown-body :deep(p) {
+  margin: 8px 0;
 }
 
-.history-content {
-  flex: 1;
-  color: #606266;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.markdown-body :deep(ul), .markdown-body :deep(ol) {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.markdown-body :deep(pre) {
+  background: #2d2d2d;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.markdown-body :deep(code) {
+  font-family: monospace;
+}
+
+.markdown-body :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.markdown-body :deep(.katex-display) {
+  margin: 12px 0;
+  overflow-x: auto;
 }
 </style>

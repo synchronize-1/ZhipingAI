@@ -1,3 +1,4 @@
+// backend-api/src/routes/service.js
 const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service');
@@ -37,38 +38,6 @@ router.post('/rooms/reserve', verifyToken, async (req, res) => {
   }
 });
 
-// ========== 报修服务 ==========
-router.post('/repairs', verifyToken, async (req, res) => {
-  try {
-    const repairId = await Service.createRepair({ ...req.body, userId: req.user.id });
-    res.status(201).json({ success: true, message: '报修提交成功', data: { repairId } });
-  } catch (error) {
-    console.error('提交报修错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
-
-router.get('/repairs/my', verifyToken, async (req, res) => {
-  try {
-    const repairs = await Service.getRepairsByUserId(req.user.id);
-    res.json({ success: true, data: repairs });
-  } catch (error) {
-    console.error('获取报修列表错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
-
-router.put('/repairs/:id/status', verifyToken, checkRole('admin'), async (req, res) => {
-  try {
-    const { status, remark } = req.body;
-    await Service.updateRepairStatus(req.params.id, status, req.user.id, remark);
-    res.json({ success: true, message: '状态更新成功' });
-  } catch (error) {
-    console.error('更新报修状态错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
-
 // ========== 图书借阅 ==========
 router.get('/books', verifyToken, async (req, res) => {
   try {
@@ -97,29 +66,6 @@ router.post('/books/borrowings/:id/return', verifyToken, async (req, res) => {
     res.json({ success: true, message: '还书成功' });
   } catch (error) {
     console.error('还书错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
-
-// ========== 设备预约 ==========
-router.get('/equipments', verifyToken, async (req, res) => {
-  try {
-    const { category } = req.query;
-    const equipments = await Service.getEquipments(category);
-    res.json({ success: true, data: equipments });
-  } catch (error) {
-    console.error('获取设备列表错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
-  }
-});
-
-router.post('/equipments/:id/reserve', verifyToken, async (req, res) => {
-  try {
-    const { startTime, endTime, purpose } = req.body;
-    const reservationId = await Service.reserveEquipment(req.user.id, req.params.id, startTime, endTime, purpose);
-    res.status(201).json({ success: true, message: '预约成功', data: { reservationId } });
-  } catch (error) {
-    console.error('预约设备错误:', error);
     res.status(500).json({ success: false, message: '服务器错误' });
   }
 });

@@ -369,18 +369,6 @@ const initDatabase = async () => {
     )
   `);
 
-  // 创建能耗数据表
-  await connection.execute(`
-    CREATE TABLE IF NOT EXISTS energy_data (
-      id INT PRIMARY KEY AUTO_INCREMENT,
-      building_id INT,
-      type ENUM('electricity', 'water', 'gas') NOT NULL,
-      value DECIMAL(10, 2) NOT NULL,
-      unit VARCHAR(20),
-      recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
   // 创建建筑表
   await connection.execute(`
     CREATE TABLE IF NOT EXISTS buildings (

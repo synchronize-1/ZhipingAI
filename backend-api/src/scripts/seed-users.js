@@ -11,7 +11,7 @@ const testUsers = [
   {
     username: 'student001',
     password: '123456',
-    name: '原神大王',
+    name: 'christie',
     role: 'student',
     email: 'zhangsan@campus.edu',
     phone: '13800138001',
@@ -115,7 +115,7 @@ async function seedUsers() {
     console.log('┌──────────────┬──────────────┬──────────────┬──────────────┐');
     console.log('│ 用户名       │ 密码         │ 姓名         │ 角色         │');
     console.log('├──────────────┼──────────────┼──────────────┼──────────────┤');
-    console.log('│ student001   │ 123456       │ 原神大王     │ 学生         │');
+    console.log('│ student001   │ 123456       │ christie     │ 学生         │');
     console.log('│ student002   │ 123456       │ 李四         │ 学生         │');
     console.log('│ student003   │ 123456       │ 王五         │ 学生         │');
     console.log('│ teacher001   │ 123456       │ 王教授       │ 教师         │');

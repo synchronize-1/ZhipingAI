@@ -58,8 +58,8 @@ export default {
         const res = await api.auth.login(this.form)
         if (res.success) {
           uni.setStorageSync('token', res.data.token)
-          // 修改用户名为原神大王
-          const userData = { ...res.data.user, name: '原神大王' }
+          // 修改用户名为christie
+          const userData = { ...res.data.user, name: 'christie' }
           uni.setStorageSync('user', userData)
           uni.showToast({ title: '登录成功', icon: 'success' })
           setTimeout(() => {

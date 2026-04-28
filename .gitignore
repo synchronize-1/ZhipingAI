@@ -43,6 +43,7 @@ build/
 backend-api/uploads/*
 !backend-api/uploads/.gitkeep
 !backend-api/uploads/avatars/.gitkeep
+datasets/
 
 # ==================== 临时文件 ====================
 *.tmp

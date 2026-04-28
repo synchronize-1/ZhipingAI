@@ -45,23 +45,23 @@
                   </el-select>
                 </el-form-item>
 
-                <el-form-item label="作文主题">
+                <el-form-item label="作文主题" required>
                   <el-input
-                    v-model="essayForm.topic"
-                    placeholder="例如：我的梦想、环境保护、科技发展等"
-                    maxlength="50"
-                    show-word-limit
+                      v-model="essayForm.topic"
+                      placeholder="例如：我的梦想、环境保护、科技发展等"
+                      maxlength="50"
+                      show-word-limit
                   />
                 </el-form-item>
 
                 <el-form-item label="字数要求">
-                  <el-slider 
-                    v-model="essayForm.wordCount" 
-                    :min="200" 
-                    :max="1500" 
-                    :step="100"
-                    show-stops
-                    :format-tooltip="(val) => `${val}字`"
+                  <el-slider
+                      v-model="essayForm.wordCount"
+                      :min="200"
+                      :max="1500"
+                      :step="100"
+                      show-stops
+                      :format-tooltip="(val) => `${val}字`"
                   />
                   <span class="slider-value">{{ essayForm.wordCount }}字</span>
                 </el-form-item>
@@ -77,20 +77,20 @@
 
                 <el-form-item label="特殊要求">
                   <el-input
-                    v-model="essayForm.requirements"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="可以补充特殊要求，例如：需要引用名言、包含具体事例、使用修辞手法等"
+                      v-model="essayForm.requirements"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="可以补充特殊要求，例如：需要引用名言、包含具体事例、使用修辞手法等"
                   />
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generateEssay"
-                    :loading="essayLoading"
-                    :disabled="!essayForm.topic.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generateEssay"
+                      :loading="essayLoading"
+                      :disabled="!essayForm.topic.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI开始创作
@@ -105,22 +105,11 @@
                   <h4>AI创作的作文</h4>
                   <el-tag type="info">{{ essayResult.length }}字</el-tag>
                 </div>
-                <div class="result-content essay-content">
-                  <div class="essay-title">{{ essayForm.topic }}</div>
-                  <div class="essay-body" v-html="formatEssay(essayResult)"></div>
-                </div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(essayResult)"></div>
                 <div class="result-actions">
-                  <el-button type="primary" @click="improveEssay">
-                    <el-icon><Edit /></el-icon>
-                    AI优化作文
-                  </el-button>
-                  <el-button @click="copyResult(essayResult)">
+                  <el-button @click="copyWithMessage(essayResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制作文
-                  </el-button>
-                  <el-button @click="downloadEssay">
-                    <el-icon><Download /></el-icon>
-                    下载文档
                   </el-button>
                 </div>
               </div>
@@ -139,22 +128,22 @@
               </div>
 
               <el-form :model="improveForm" label-width="100px" class="ai-form">
-                <el-form-item label="作文标题">
+                <el-form-item label="作文标题" required>
                   <el-input
-                    v-model="improveForm.title"
-                    placeholder="请输入作文标题"
-                    maxlength="50"
+                      v-model="improveForm.title"
+                      placeholder="请输入作文标题"
+                      maxlength="50"
                   />
                 </el-form-item>
 
-                <el-form-item label="作文内容">
+                <el-form-item label="作文内容" required>
                   <el-input
-                    v-model="improveForm.content"
-                    type="textarea"
-                    :rows="15"
-                    placeholder="请粘贴你的作文内容..."
-                    maxlength="5000"
-                    show-word-limit
+                      v-model="improveForm.content"
+                      type="textarea"
+                      :rows="15"
+                      placeholder="请粘贴你的作文内容..."
+                      maxlength="5000"
+                      show-word-limit
                   />
                 </el-form-item>
 
@@ -169,12 +158,12 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="improveMyEssay"
-                    :loading="improveLoading"
-                    :disabled="!improveForm.content.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="improveMyEssay"
+                      :loading="improveLoading"
+                      :disabled="!improveForm.content.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI开始批改
@@ -188,15 +177,11 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI批改报告</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(improveResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(improveResult)"></div>
                 <div class="result-actions">
-                  <el-button @click="copyResult(improveResult)">
+                  <el-button @click="copyWithMessage(improveResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制报告
-                  </el-button>
-                  <el-button @click="viewComparison">
-                    <el-icon><View /></el-icon>
-                    对比查看
                   </el-button>
                 </div>
               </div>
@@ -225,41 +210,41 @@
                   </el-select>
                 </el-form-item>
 
-                <el-form-item label="报告主题">
+                <el-form-item label="报告主题" required>
                   <el-input
-                    v-model="reportForm.topic"
-                    placeholder="例如：化学实验、《红楼梦》读后感等"
-                    maxlength="100"
+                      v-model="reportForm.topic"
+                      placeholder="例如：化学实验、《红楼梦》读后感等"
+                      maxlength="100"
                   />
                 </el-form-item>
 
-                <el-form-item label="关键信息">
+                <el-form-item label="关键信息" required>
                   <el-input
-                    v-model="reportForm.keyInfo"
-                    type="textarea"
-                    :rows="6"
-                    placeholder="请输入关键信息，例如：实验步骤、书籍内容、调研数据等"
+                      v-model="reportForm.keyInfo"
+                      type="textarea"
+                      :rows="6"
+                      placeholder="请输入关键信息，例如：实验步骤、书籍内容、调研数据等"
                   />
                 </el-form-item>
 
                 <el-form-item label="字数要求">
-                  <el-slider 
-                    v-model="reportForm.wordCount" 
-                    :min="500" 
-                    :max="3000" 
-                    :step="100"
-                    :format-tooltip="(val) => `${val}字`"
+                  <el-slider
+                      v-model="reportForm.wordCount"
+                      :min="500"
+                      :max="3000"
+                      :step="100"
+                      :format-tooltip="(val) => `${val}字`"
                   />
                   <span class="slider-value">{{ reportForm.wordCount }}字</span>
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generateReport"
-                    :loading="reportLoading"
-                    :disabled="!reportForm.topic.trim() || !reportForm.keyInfo.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generateReport"
+                      :loading="reportLoading"
+                      :disabled="!reportForm.topic.trim() || !reportForm.keyInfo.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI生成报告
@@ -273,19 +258,11 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI生成的报告</h4>
                 </div>
-                <div class="result-content" v-html="formatResult(reportResult)"></div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(reportResult)"></div>
                 <div class="result-actions">
-                  <el-button type="primary" @click="saveReport">
-                    <el-icon><FolderAdd /></el-icon>
-                    保存报告
-                  </el-button>
-                  <el-button @click="copyResult(reportResult)">
+                  <el-button @click="copyWithMessage(reportResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制报告
-                  </el-button>
-                  <el-button @click="downloadReport">
-                    <el-icon><Download /></el-icon>
-                    导出Word
                   </el-button>
                 </div>
               </div>
@@ -315,27 +292,27 @@
                   </el-select>
                 </el-form-item>
 
-                <el-form-item label="收件人">
+                <el-form-item label="收件人" required>
                   <el-input
-                    v-model="emailForm.recipient"
-                    placeholder="例如：张老师、校长、招生办等"
+                      v-model="emailForm.recipient"
+                      placeholder="例如：张老师、校长、招生办等"
                   />
                 </el-form-item>
 
-                <el-form-item label="邮件主题">
+                <el-form-item label="邮件主题" required>
                   <el-input
-                    v-model="emailForm.subject"
-                    placeholder="请输入邮件主题"
-                    maxlength="100"
+                      v-model="emailForm.subject"
+                      placeholder="请输入邮件主题"
+                      maxlength="100"
                   />
                 </el-form-item>
 
-                <el-form-item label="主要内容">
+                <el-form-item label="主要内容" required>
                   <el-input
-                    v-model="emailForm.content"
-                    type="textarea"
-                    :rows="5"
-                    placeholder="请简要描述邮件的主要内容和目的"
+                      v-model="emailForm.content"
+                      type="textarea"
+                      :rows="5"
+                      placeholder="请简要描述邮件的主要内容和目的"
                   />
                 </el-form-item>
 
@@ -348,12 +325,12 @@
                 </el-form-item>
 
                 <el-form-item>
-                  <el-button 
-                    type="primary" 
-                    size="large"
-                    @click="generateEmail"
-                    :loading="emailLoading"
-                    :disabled="!emailForm.subject.trim() || !emailForm.content.trim()"
+                  <el-button
+                      type="primary"
+                      size="large"
+                      @click="generateEmail"
+                      :loading="emailLoading"
+                      :disabled="!emailForm.subject.trim() || !emailForm.content.trim()"
                   >
                     <el-icon><MagicStick /></el-icon>
                     AI生成邮件
@@ -367,19 +344,9 @@
                   <el-icon class="result-icon"><CircleCheck /></el-icon>
                   <h4>AI生成的邮件</h4>
                 </div>
-                <div class="result-content email-content">
-                  <div class="email-meta">
-                    <p><strong>收件人：</strong>{{ emailForm.recipient }}</p>
-                    <p><strong>主题：</strong>{{ emailForm.subject }}</p>
-                  </div>
-                  <div class="email-body" v-html="formatEmail(emailResult)"></div>
-                </div>
+                <div class="result-content markdown-body" v-html="renderMarkdown(emailResult)"></div>
                 <div class="result-actions">
-                  <el-button type="primary" @click="sendEmail">
-                    <el-icon><Promotion /></el-icon>
-                    发送邮件
-                  </el-button>
-                  <el-button @click="copyResult(emailResult)">
+                  <el-button @click="copyWithMessage(emailResult, ElMessage)">
                     <el-icon><DocumentCopy /></el-icon>
                     复制邮件
                   </el-button>
@@ -397,6 +364,9 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from 'axios'
+import { renderMarkdown, copyWithMessage } from '@/composables/useMarkdownRenderer'
+
+const API_BASE = 'http://localhost:3000/api/ai-science'
 
 const activeTab = ref('essay')
 const writingCount = ref(0)
@@ -453,9 +423,9 @@ ${essayForm.requirements ? `特殊要求：${essayForm.requirements}` : ''}
 1. 结构完整，层次清晰
 2. 语言流畅，表达准确
 3. 内容充实，有真情实感
-4. 符合${essayForm.type}的特点`
+4. 请用Markdown格式输出，适当使用标题、列表等格式美化排版`
 
-    const response = await axios.post('/api/ai-science/chat', {
+    const response = await axios.post(`${API_BASE}/chat`, {
       message: prompt
     })
 
@@ -490,9 +460,11 @@ ${improveForm.content}
 1. 总体评价和亮点
 2. 具体问题和修改建议
 3. 优化后的段落示例
-4. 提升建议`
+4. 提升建议
 
-    const response = await axios.post('/api/ai-science/chat', {
+请用Markdown格式输出，使用标题、列表、引用等格式使报告更清晰易读。`
+
+    const response = await axios.post(`${API_BASE}/chat`, {
       message: prompt
     })
 
@@ -521,9 +493,9 @@ ${reportForm.keyInfo}
 
 字数：约${reportForm.wordCount}字
 
-请按照${reportForm.type}的标准格式撰写，包含必要的章节和内容。`
+请按照${reportForm.type}的标准格式撰写，包含必要的章节和内容。请用Markdown格式输出，使用标题层级组织内容。`
 
-    const response = await axios.post('/api/ai-science/chat', {
+    const response = await axios.post(`${API_BASE}/chat`, {
       message: prompt
     })
 
@@ -553,9 +525,9 @@ const generateEmail = async () => {
 主要内容：${emailForm.content}
 语气风格：${emailForm.tone}
 
-请按照正式邮件格式撰写，包含称呼、正文、结尾和署名。`
+请按照正式邮件格式撰写，包含称呼、正文、结尾和署名。请用清晰易读的格式输出。`
 
-    const response = await axios.post('/api/ai-science/chat', {
+    const response = await axios.post(`${API_BASE}/chat`, {
       message: prompt
     })
 
@@ -613,57 +585,6 @@ const clearEmail = () => {
     tone: '正式'
   })
   emailResult.value = ''
-}
-
-const formatResult = (text) => {
-  return text
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^(\d+\.|[•-])\s/gm, '<br>$1 ')
-}
-
-const formatEssay = (text) => {
-  return text
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>')
-    .replace(/$/, '</p>')
-}
-
-const formatEmail = (text) => {
-  return text.replace(/\n/g, '<br>')
-}
-
-const copyResult = (text) => {
-  navigator.clipboard.writeText(text)
-  ElMessage.success('已复制到剪贴板')
-}
-
-const improveEssay = () => {
-  improveForm.content = essayResult.value
-  improveForm.title = essayForm.topic
-  activeTab.value = 'improve'
-  ElMessage.info('已切换到批改模式，可以继续优化')
-}
-
-const downloadEssay = () => {
-  ElMessage.info('文档下载功能开发中...')
-}
-
-const viewComparison = () => {
-  ElMessage.info('对比查看功能开发中...')
-}
-
-const saveReport = () => {
-  ElMessage.success('报告已保存')
-}
-
-const downloadReport = () => {
-  ElMessage.info('Word导出功能开发中...')
-}
-
-const sendEmail = () => {
-  ElMessage.info('邮件发送功能开发中...')
 }
 </script>
 
@@ -829,37 +750,81 @@ const sendEmail = () => {
   overflow-y: auto;
 }
 
-.essay-content .essay-title {
-  text-align: center;
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: #303133;
-}
-
-.essay-content .essay-body {
-  text-indent: 2em;
-  line-height: 2;
-}
-
-.email-content .email-meta {
-  padding: 15px;
-  background: #f4f4f5;
-  border-radius: 6px;
-  margin-bottom: 15px;
-}
-
-.email-content .email-meta p {
-  margin: 5px 0;
-}
-
-.email-content .email-body {
-  line-height: 1.8;
-}
-
 .result-actions {
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+/* Markdown 样式 */
+.markdown-body :deep(h1) {
+  font-size: 24px;
+  margin: 16px 0 8px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f5576c;
+}
+
+.markdown-body :deep(h2) {
+  font-size: 20px;
+  margin: 14px 0 6px 0;
+  padding-left: 10px;
+  border-left: 4px solid #f5576c;
+}
+
+.markdown-body :deep(h3) {
+  font-size: 18px;
+  margin: 12px 0 5px 0;
+}
+
+.markdown-body :deep(p) {
+  margin: 8px 0;
+}
+
+.markdown-body :deep(ul), .markdown-body :deep(ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.markdown-body :deep(li) {
+  margin: 4px 0;
+}
+
+.markdown-body :deep(pre) {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.markdown-body :deep(code) {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+.markdown-body :deep(code:not(pre code)) {
+  background: #f4f4f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #e6a23c;
+}
+
+.markdown-body :deep(blockquote) {
+  border-left: 3px solid #909399;
+  background: #f5f5f5;
+  padding: 8px 16px;
+  margin: 12px 0;
+  color: #606266;
+  font-style: italic;
+}
+
+.markdown-body :deep(.katex) {
+  font-size: 1.1em;
+}
+
+.markdown-body :deep(.katex-display) {
+  margin: 12px 0;
+  overflow-x: auto;
 }
 </style>

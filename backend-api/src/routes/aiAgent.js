@@ -464,7 +464,7 @@ async function getSmartReply(message, userId) {
         ]
       };
       
-      // 学生课表数据（原神大王的课表）
+      // 学生课表数据（christie的课表）
       const student001Schedule = {
         1: [ // 周一
           { name: '数据结构与算法', teacher: '陈教授', location: '教A-301', start_time: '08:00', end_time: '09:40', type: '理论' },

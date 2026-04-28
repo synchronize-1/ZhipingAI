@@ -82,8 +82,8 @@
                 <p>共{{ todayClassList.length }}节课 · {{ totalStudentsToday }}名学生</p>
               </div>
             </div>
-            <el-button type="primary" text @click="$router.push('/schedule')">
-              课表管理
+            <el-button type="primary" text @click="$router.push('/courses')">
+              课程管理
               <el-icon class="el-icon--right"><ArrowRight /></el-icon>
             </el-button>
           </div>

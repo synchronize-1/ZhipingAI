@@ -77,7 +77,7 @@
                 <p>{{ currentWeekday }} · 共{{ todayCourses.length }}节课</p>
               </div>
             </div>
-            <el-button type="default" round @click="$router.push('/my-schedule')">
+            <el-button type="default" round @click="$router.push('/my-courses')">
               查看课表
               <el-icon class="el-icon--right"><ArrowRight /></el-icon>
             </el-button>
@@ -556,7 +556,6 @@ const studyProgress = computed(() => Math.min((weeklyStudyHours.value / 20) * 10
 const quickServices = ref([
   { name: '食堂', icon: 'Bowl', path: '/services', gradient: 'linear-gradient(135deg, #e8a87c, #d4956a)' },
   { name: '图书馆', icon: 'Reading', path: '/services', gradient: 'linear-gradient(135deg, #85a392, #6b8f7a)' },
-  { name: '报修', icon: 'SetUp', path: '/services', gradient: 'linear-gradient(135deg, #c4a67c, #b08d5b)' },
   { name: '成绩', icon: 'DataLine', path: '/growth', gradient: 'linear-gradient(135deg, #8b7355, #705d45)' },
   { name: '活动', icon: 'Flag', path: '/activities', gradient: 'linear-gradient(135deg, #a89078, #8d7560)' },
   { name: '校园卡', icon: 'Wallet', path: '/services', gradient: 'linear-gradient(135deg, #7a9e7e, #5f8463)' }

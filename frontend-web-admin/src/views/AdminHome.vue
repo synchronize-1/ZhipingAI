@@ -5,7 +5,7 @@
       <div class="banner-content">
         <div class="banner-left">
           <h1>{{ greetingText }}，{{ userStore.user?.name || '管理员' }} 👋</h1>
-          <p>welcome back！</p>
+          <p>欢迎回来！</p>
         </div>
         <div class="banner-right">
           <div class="system-status">
@@ -43,7 +43,7 @@
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon green">
-              <el-icon><Checked /></el-icon>
+              <el-icon><TrendCharts /></el-icon>
             </div>
             <el-tag type="success" size="small">良好</el-tag>
           </div>
@@ -72,17 +72,17 @@
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon purple">
-              <el-icon><Service /></el-icon>
+              <el-icon><WarningFilled /></el-icon>
             </div>
-            <el-tag :type="pendingServices > 10 ? 'danger' : 'success'" size="small">
-              {{ pendingServices > 0 ? '待处理' : '已清空' }}
+            <el-tag :type="warningsCount > 0 ? 'danger' : 'success'" size="small">
+              {{ warningsCount > 0 ? `${warningsCount} 条预警` : '无预警' }}
             </el-tag>
           </div>
-          <div class="metric-value">{{ pendingServices }}</div>
-          <div class="metric-label">待处理工单</div>
+          <div class="metric-value">{{ warningsCount }}</div>
+          <div class="metric-label">AI健康预警</div>
           <div class="metric-detail">
-            <span>报修 {{ repairCount }}</span>
-            <span>预约 {{ bookingCount }}</span>
+            <span>重度 {{ warningsCountHeavy }}</span>
+            <span>中度 {{ warningsCountMedium }}</span>
           </div>
         </div>
       </div>
@@ -90,193 +90,8 @@
 
     <!-- 主内容区域 -->
     <div class="main-content">
-      <!-- 左侧大数据看板 -->
+      <!-- 左侧：快捷管理 -->
       <div class="left-section">
-        <!-- 实时数据趋势 -->
-        <div class="content-card chart-section">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
-              <div>
-                <h3>实时数据监控</h3>
-                <p>用户活跃度与系统访问趋势</p>
-              </div>
-            </div>
-            <el-radio-group v-model="chartTimeRange" size="small">
-              <el-radio-button label="today">今日</el-radio-button>
-              <el-radio-button label="week">本周</el-radio-button>
-              <el-radio-button label="month">本月</el-radio-button>
-            </el-radio-group>
-          </div>
-          <div class="chart-container" ref="mainChartRef"></div>
-        </div>
-
-        <!-- 功能使用统计 -->
-        <div class="content-card usage-section">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon green">
-                <el-icon><PieChart /></el-icon>
-              </div>
-              <div>
-                <h3>功能使用分布</h3>
-                <p>各模块访问量统计</p>
-              </div>
-            </div>
-          </div>
-          <div class="usage-grid">
-            <div class="chart-pie" ref="pieChartRef"></div>
-            <div class="usage-list">
-              <div v-for="item in usageStats" :key="item.name" class="usage-item">
-                <div class="usage-info">
-                  <div class="usage-color" :style="{ background: item.color }"></div>
-                  <span class="usage-name">{{ item.name }}</span>
-                </div>
-                <div class="usage-data">
-                  <span class="usage-value">{{ item.value.toLocaleString() }}</span>
-                  <span class="usage-percent">{{ item.percent }}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 今日概览 -->
-        <div class="content-card today-overview">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon blue">
-                <el-icon><Calendar /></el-icon>
-              </div>
-              <div>
-                <h3>今日概览</h3>
-                <p>{{ new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }) }}</p>
-              </div>
-            </div>
-          </div>
-          <div class="overview-grid">
-            <div class="overview-item">
-              <div class="overview-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
-                <el-icon><Clock /></el-icon>
-              </div>
-              <div class="overview-info">
-                <span class="overview-label">今日课程</span>
-                <span class="overview-value">28 节</span>
-              </div>
-            </div>
-            <div class="overview-item">
-              <div class="overview-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
-                <el-icon><User /></el-icon>
-              </div>
-              <div class="overview-info">
-                <span class="overview-label">今日访问</span>
-                <span class="overview-value">8,562 人</span>
-              </div>
-            </div>
-            <div class="overview-item">
-              <div class="overview-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
-                <el-icon><Document /></el-icon>
-              </div>
-              <div class="overview-info">
-                <span class="overview-label">新增报修</span>
-                <span class="overview-value">12 条</span>
-              </div>
-            </div>
-            <div class="overview-item">
-              <div class="overview-icon" style="background: linear-gradient(135deg, #ef4444, #f87171);">
-                <el-icon><Bell /></el-icon>
-              </div>
-              <div class="overview-info">
-                <span class="overview-label">待办事项</span>
-                <span class="overview-value">5 项</span>
-              </div>
-            </div>
-          </div>
-          <!-- 今日重点事项 -->
-          <div class="today-highlights">
-            <h4 class="highlights-title">📌 今日重点</h4>
-            <div class="highlights-list">
-              <div class="highlight-item">
-                <span class="highlight-time">09:00</span>
-                <span class="highlight-text">学院教师会议 - 行政楼3楼会议室</span>
-                <el-tag size="small" type="danger">重要</el-tag>
-              </div>
-              <div class="highlight-item">
-                <span class="highlight-time">14:00</span>
-                <span class="highlight-text">设备维护检查 - 实验楼B区</span>
-                <el-tag size="small" type="warning">待处理</el-tag>
-              </div>
-              <div class="highlight-item">
-                <span class="highlight-time">16:30</span>
-                <span class="highlight-text">新生入学系统培训</span>
-                <el-tag size="small" type="success">进行中</el-tag>
-              </div>
-            </div>
-          </div>
-          <!-- 快速统计 -->
-          <div class="quick-stats">
-            <div class="stat-row">
-              <div class="stat-item">
-                <span class="stat-icon">📚</span>
-                <div class="stat-info">
-                  <span class="stat-value">156</span>
-                  <span class="stat-label">开设课程</span>
-                </div>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">🏫</span>
-                <div class="stat-info">
-                  <span class="stat-value">48</span>
-                  <span class="stat-label">教室使用</span>
-                </div>
-              </div>
-              <div class="stat-item">
-                <span class="stat-icon">📋</span>
-                <div class="stat-info">
-                  <span class="stat-value">23</span>
-                  <span class="stat-label">待审批</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 右侧管理面板 -->
-      <div class="right-section">
-        <!-- 系统告警 -->
-        <div class="content-card alerts-section">
-          <div class="card-header">
-            <div class="header-left">
-              <div class="header-icon red">
-                <el-icon><WarningFilled /></el-icon>
-              </div>
-              <div>
-                <h3>系统告警</h3>
-                <p>{{ alerts.length }}条待处理</p>
-              </div>
-            </div>
-            <el-button type="primary" text size="small">全部处理</el-button>
-          </div>
-          <div class="alerts-list">
-            <div v-for="alert in alerts" :key="alert.id" class="alert-item" :class="alert.level">
-              <div class="alert-icon">
-                <el-icon v-if="alert.level === 'error'"><CircleCloseFilled /></el-icon>
-                <el-icon v-else-if="alert.level === 'warning'"><WarningFilled /></el-icon>
-                <el-icon v-else><InfoFilled /></el-icon>
-              </div>
-              <div class="alert-content">
-                <span class="alert-title">{{ alert.title }}</span>
-                <span class="alert-time">{{ alert.time }}</span>
-              </div>
-              <el-button type="primary" text size="small" @click="handleAlert(alert)">处理</el-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 快捷管理 -->
         <div class="content-card quick-manage">
           <div class="card-header">
             <div class="header-left">
@@ -295,8 +110,7 @@
                 <el-icon :size="22">
                   <User v-if="item.iconName === 'User'" />
                   <Reading v-else-if="item.iconName === 'Reading'" />
-                  <OfficeBuilding v-else-if="item.iconName === 'OfficeBuilding'" />
-                  <Lock v-else-if="item.iconName === 'Lock'" />
+                  <DataAnalysis v-else-if="item.iconName === 'DataAnalysis'" />
                   <Bell v-else-if="item.iconName === 'Bell'" />
                   <Setting v-else-if="item.iconName === 'Setting'" />
                 </el-icon>
@@ -309,50 +123,204 @@
           </div>
         </div>
 
-        <!-- 最近操作日志 -->
-        <div class="content-card logs-section">
+        <!-- 预警干预卡片 -->
+        <div class="content-card warnings-preview">
           <div class="card-header">
             <div class="header-left">
-              <div class="header-icon blue">
-                <el-icon><Document /></el-icon>
+              <div class="header-icon red">
+                <el-icon><WarningFilled /></el-icon>
               </div>
               <div>
-                <h3>操作日志</h3>
-                <p>最近系统操作记录</p>
+                <h3>预警干预</h3>
+                <p>{{ warnings.length }} 条待处理预警</p>
               </div>
             </div>
-            <el-button type="primary" text size="small" @click="viewAllLogs">
+            <el-button type="primary" text size="small" @click="goToAIHealth">
               查看全部
               <el-icon class="el-icon--right"><ArrowRight /></el-icon>
             </el-button>
           </div>
-          <div class="logs-list">
-            <div v-for="log in recentLogs" :key="log.id" class="log-item">
-              <el-avatar :size="32" :src="log.avatar">{{ log.operator.charAt(0) }}</el-avatar>
-              <div class="log-content">
-                <span class="log-action">
-                  <strong>{{ log.operator }}</strong> {{ log.action }}
-                </span>
-                <span class="log-time">{{ log.time }}</span>
+          <div class="warnings-list">
+            <div v-for="warning in warnings.slice(0, 5)" :key="warning.id" class="warning-item">
+              <div class="warning-info">
+                <div class="warning-header">
+                  <span class="warning-student">{{ warning.studentName }}</span>
+                  <el-tag :type="getWarningTagType(warning.level)" size="small">
+                    {{ warning.level }}依赖
+                  </el-tag>
+                </div>
+                <p class="warning-trigger">{{ warning.trigger }}</p>
+              </div>
+              <el-button size="small" type="primary" plain @click="showStudentDetail(warning)">
+                查看详情
+              </el-button>
+            </div>
+            <div v-if="warnings.length === 0" class="empty-warning">
+              <el-icon><SuccessFilled /></el-icon>
+              <span>暂无预警，保持现状</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：数据图表区域 -->
+      <div class="right-section">
+        <!-- AI健康概览组件 -->
+        <div class="content-card ai-overview">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon blue">
+                <el-icon><DataAnalysis /></el-icon>
+              </div>
+              <div>
+                <h3>AI健康概览</h3>
+                <p>全校AI使用健康度</p>
+              </div>
+            </div>
+            <el-button type="primary" text size="small" @click="goToAIHealth">
+              详情
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <!-- 简化的 AI 健康概览 -->
+          <div class="ai-overview-stats">
+            <div class="overview-stat">
+              <span class="stat-label">预警学生</span>
+              <span class="stat-value">{{ warningsCount }}</span>
+            </div>
+            <div class="overview-stat">
+              <span class="stat-label">AI使用时长(周)</span>
+              <span class="stat-value">{{ aiUsageHoursWeekly }}</span>
+            </div>
+            <div class="overview-stat">
+              <span class="stat-label">依赖指数(平均)</span>
+              <span class="stat-value">{{ avgDependenceScore }}</span>
+            </div>
+          </div>
+          <div class="mini-chart">
+            <div ref="miniChartRef" class="mini-chart-box"></div>
+          </div>
+        </div>
+
+        <!-- 今日概览卡片 -->
+        <div class="content-card today-overview">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon blue">
+                <el-icon><Calendar /></el-icon>
+              </div>
+              <div>
+                <h3>今日概览</h3>
+                <p>{{ currentDate }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="overview-grid">
+            <div class="overview-item">
+              <div class="overview-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                <el-icon><Clock /></el-icon>
+              </div>
+              <div class="overview-info">
+                <span class="overview-label">今日课程</span>
+                <span class="overview-value">{{ todayCourses }} 节</span>
+              </div>
+            </div>
+            <div class="overview-item">
+              <div class="overview-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+                <el-icon><User /></el-icon>
+              </div>
+              <div class="overview-info">
+                <span class="overview-label">今日访问</span>
+                <span class="overview-value">{{ todayVisits.toLocaleString() }} 人</span>
+              </div>
+            </div>
+            <div class="overview-item">
+              <div class="overview-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">
+                <el-icon><Document /></el-icon>
+              </div>
+              <div class="overview-info">
+                <span class="overview-label">待处理服务</span>
+                <span class="overview-value">{{ pendingServices }} 条</span>
+              </div>
+            </div>
+            <div class="overview-item">
+              <div class="overview-icon" style="background: linear-gradient(135deg, #ef4444, #f87171);">
+                <el-icon><Bell /></el-icon>
+              </div>
+              <div class="overview-info">
+                <span class="overview-label">未读通知</span>
+                <span class="overview-value">{{ unreadNotifications }}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- 学生详情弹窗 -->
+    <el-dialog
+        v-model="showDetailDialog"
+        :title="selectedWarning?.studentName + ' - 详情'"
+        width="700px"
+        class="student-detail-dialog"
+    >
+      <div v-if="studentDetail" v-loading="detailLoading" class="student-detail-content">
+        <div class="detail-header">
+          <div class="student-avatar">
+            {{ studentDetail.name?.charAt(0) }}
+          </div>
+          <div class="student-info">
+            <h3>{{ studentDetail.name }}</h3>
+            <p>学号：{{ studentDetail.studentId }}</p>
+            <p>班级：{{ studentDetail.className || studentDetail.department || '未分配' }}</p>
+          </div>
+          <div class="dependence-badge" :class="getDependenceClass(studentDetail.dependenceIndex)">
+            <span class="score">{{ studentDetail.dependenceIndex }}</span>
+            <span class="level">{{ studentDetail.dependenceLevel }}依赖</span>
+          </div>
+        </div>
+
+        <div class="detail-tabs">
+          <el-tabs v-model="activeTab">
+            <el-tab-pane label="成绩趋势" name="score">
+              <div ref="scoreChartRef" class="detail-chart"></div>
+            </el-tab-pane>
+            <el-tab-pane label="AI使用构成" name="usage">
+              <div ref="usageChartRef" class="detail-chart"></div>
+            </el-tab-pane>
+            <el-tab-pane label="预警信息" name="warning">
+              <div class="warning-detail">
+                <p><strong>触发条件：</strong>{{ selectedWarning?.trigger }}</p>
+                <p><strong>建议方案：</strong>{{ selectedWarning?.suggestion }}</p>
+                <div class="detail-actions">
+                  <el-button type="primary" @click="handleWarningAction(selectedWarning, 'message')">
+                    <el-icon><ChatDotRound /></el-icon> 发送提醒
+                  </el-button>
+                  <el-button type="danger" plain @click="handleWarningAction(selectedWarning, 'meeting')">
+                    <el-icon><User /></el-icon> 安排面谈
+                  </el-button>
+                </div>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
+import api from '@/api'
 import {
   Setting, Refresh, User, Checked, Monitor, Service,
   TrendCharts, PieChart, WarningFilled, CircleCloseFilled,
-  InfoFilled, Grid, Document, ArrowRight, Reading, OfficeBuilding, Lock, Bell, Calendar, Clock
+  InfoFilled, Grid, Document, ArrowRight, Reading, Bell,
+  Calendar, Clock, DataAnalysis, SuccessFilled, ChatDotRound
 } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'AdminHome' })
@@ -360,6 +328,7 @@ defineOptions({ name: 'AdminHome' })
 const router = useRouter()
 const userStore = useUserStore()
 
+// ==================== 响应式数据 ====================
 const greetingText = computed(() => {
   const hour = new Date().getHours()
   if (hour < 6) return '夜深了'
@@ -371,212 +340,330 @@ const greetingText = computed(() => {
   return '夜深了'
 })
 
+const currentDate = computed(() => {
+  const now = new Date()
+  return now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
+})
+
 // 核心指标数据
 const totalUsers = ref(12580)
 const studentCount = ref(11245)
 const teacherCount = ref(1335)
 const userGrowth = ref(5.2)
-
 const todayAttendance = ref(94)
 const checkedInCount = ref(10856)
 const notCheckedCount = ref(689)
-
 const systemLoad = ref(42)
 const onlineUsers = ref(3456)
 
+// AI健康数据
+const warnings = ref([])
+const warningsCount = ref(0)
+const warningsCountHeavy = ref(0)
+const warningsCountMedium = ref(0)
+const aiUsageHoursWeekly = ref(184)
+const avgDependenceScore = ref(58)
+
+// 今日数据
+const todayCourses = ref(28)
+const todayVisits = ref(8562)
 const pendingServices = ref(18)
-const repairCount = ref(12)
-const bookingCount = ref(6)
+const unreadNotifications = ref(0)
 
-// 图表时间范围
-const chartTimeRange = ref('today')
-
-// 不同时间范围的数据
-const chartDataMap = {
-  today: {
-    xAxis: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
-    visits: [1200, 800, 2500, 4800, 3600, 5200, 3100],
-    activeUsers: [800, 500, 1800, 3200, 2800, 4100, 2400],
-    newUsers: [12, 8, 45, 68, 52, 78, 35]
-  },
-  week: {
-    xAxis: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-    visits: [15200, 18500, 22300, 19800, 21500, 12800, 9500],
-    activeUsers: [12800, 15200, 18600, 16500, 17800, 10200, 7800],
-    newUsers: [245, 312, 398, 356, 428, 189, 156]
-  },
-  month: {
-    xAxis: ['第1周', '第2周', '第3周', '第4周'],
-    visits: [85600, 92300, 98500, 87200],
-    activeUsers: [68500, 75800, 82300, 71600],
-    newUsers: [1256, 1489, 1678, 1423]
-  }
-}
-
-// 功能使用统计
-const usageStats = ref([
-  { name: '课程学习', value: 45680, percent: 35, color: '#667eea' },
-  { name: '校园服务', value: 32450, percent: 25, color: '#10b981' },
-  { name: '考勤签到', value: 25890, percent: 20, color: '#f59e0b' },
-  { name: '成长档案', value: 15670, percent: 12, color: '#ef4444' },
-  { name: '其他功能', value: 10310, percent: 8, color: '#6b7280' }
-])
-
-// 系统告警
-const alerts = ref([
-  { id: 1, title: '服务器CPU使用率过高（85%）', level: 'warning', time: '5分钟前' },
-  { id: 2, title: '数据库连接池接近上限', level: 'warning', time: '15分钟前' },
-  { id: 3, title: '教室A-301空调故障报修', level: 'info', time: '1小时前' }
-])
-
-// 快捷管理 - 使用图标名称
+// 快捷管理
 const quickManage = ref([
   { name: '用户管理', iconName: 'User', path: '/users', count: '12,580', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
   { name: '课程管理', iconName: 'Reading', path: '/courses', count: '156', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
-  { name: '教室管理', iconName: 'OfficeBuilding', path: '/rooms', count: '89', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { name: '安全监控', iconName: 'Lock', path: '/security', count: '正常', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+  { name: 'AI健康评估', iconName: 'DataAnalysis', path: '/admin-health', count: '评估', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
   { name: '通知发布', iconName: 'Bell', path: '/notifications', count: '发布', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
   { name: '系统设置', iconName: 'Setting', path: '/profile', count: '配置', gradient: 'linear-gradient(135deg, #a8edea, #fed6e3)' }
 ])
 
-// 操作日志
-const recentLogs = ref([
-  { id: 1, operator: '王老师', action: '发布了新的课程通知', time: '10分钟前', avatar: '' },
-  { id: 2, operator: '系统', action: '自动备份数据库完成', time: '30分钟前', avatar: '' },
-  { id: 3, operator: '张管理', action: '处理了报修工单 #2024001', time: '1小时前', avatar: '' },
-  { id: 4, operator: '李管理', action: '添加了新用户 student123', time: '2小时前', avatar: '' }
-])
+// 弹窗相关
+const showDetailDialog = ref(false)
+const selectedWarning = ref(null)
+const studentDetail = ref(null)
+const detailLoading = ref(false)
+const activeTab = ref('score')
 
-const mainChartRef = ref(null)
-const pieChartRef = ref(null)
+// 图表引用
+const miniChartRef = ref(null)
+const scoreChartRef = ref(null)
+const usageChartRef = ref(null)
+let miniChart = null
+let scoreChart = null
+let usageChart = null
 
+// ==================== 辅助函数 ====================
 const getLoadColor = (load) => {
   if (load < 50) return '#10b981'
   if (load < 80) return '#f59e0b'
   return '#ef4444'
 }
 
+const getWarningTagType = (level) => {
+  if (level === '轻度') return 'success'
+  if (level === '中度') return 'warning'
+  return 'danger'
+}
+
+const getDependenceClass = (score) => {
+  if (score >= 80) return 'heavy'
+  if (score >= 50) return 'medium'
+  return 'light'
+}
+
+// ==================== 数据获取 ====================
+const fetchOverview = async () => {
+  try {
+    const res = await api.dashboard.overview()
+    if (res.success) {
+      totalUsers.value = res.data.total_students + res.data.total_teachers
+      studentCount.value = res.data.total_students
+      teacherCount.value = res.data.total_teachers
+      pendingServices.value = res.data.pending_repairs || 0
+    }
+  } catch (e) {
+    console.error('获取概览数据失败:', e)
+  }
+}
+
+const fetchWarnings = async () => {
+  try {
+    const res = await api.aiHealth.warnings()
+    if (res.success) {
+      warnings.value = res.data || []
+      warningsCount.value = warnings.value.length
+      warningsCountHeavy.value = warnings.value.filter(w => w.level === '重度').length
+      warningsCountMedium.value = warnings.value.filter(w => w.level === '中度').length
+    }
+  } catch (e) {
+    console.error('获取预警数据失败:', e)
+  }
+}
+
+const fetchAIStats = async () => {
+  try {
+    const res = await api.dashboard.aiStats?.()
+    if (res?.success) {
+      aiUsageHoursWeekly.value = res.data.aiUsageHoursWeekly || 184
+      avgDependenceScore.value = res.data.avgDependenceScore || 58
+    }
+  } catch (e) {
+    console.error('获取AI统计失败:', e)
+    // 使用默认值
+    aiUsageHoursWeekly.value = 184
+    avgDependenceScore.value = 58
+  }
+}
+
+const fetchNotifications = async () => {
+  try {
+    const res = await api.notifications.list({ unreadOnly: true })
+    if (res.success) {
+      unreadNotifications.value = res.data.unreadCount || 0
+    }
+  } catch (e) {
+    console.error('获取通知失败:', e)
+  }
+}
+
+// 刷新所有数据
 const refreshData = () => {
+  fetchOverview()
+  fetchWarnings()
+  fetchAIStats()
+  fetchNotifications()
   ElMessage.success('数据已刷新')
 }
 
-const handleAlert = (alert) => {
-  ElMessage.info(`处理告警: ${alert.title}`)
-}
-
+// ==================== 导航 ====================
 const navigateTo = (path) => {
   router.push(path)
 }
 
-const viewAllLogs = () => {
-  router.push('/security?tab=logs')
+const goToAIHealth = () => {
+  router.push('/admin-health')
 }
 
-const updateMainChart = () => {
-  if (!mainChartRef.value) return
+// ==================== 预警详情弹窗 ====================
+const showStudentDetail = async (warning) => {
+  selectedWarning.value = warning
+  showDetailDialog.value = true
+  detailLoading.value = true
 
-  const chart = echarts.getInstanceByDom(mainChartRef.value) || echarts.init(mainChartRef.value)
-  const data = chartDataMap[chartTimeRange.value]
-
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['访问量', '活跃用户', '新增用户'], right: 20 },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: data.xAxis
-    },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        name: '访问量',
-        type: 'line',
-        smooth: true,
-        data: data.visits,
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(102, 126, 234, 0.4)' },
-            { offset: 1, color: 'rgba(102, 126, 234, 0.05)' }
-          ])
-        },
-        itemStyle: { color: '#667eea' }
-      },
-      {
-        name: '活跃用户',
-        type: 'line',
-        smooth: true,
-        data: data.activeUsers,
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(16, 185, 129, 0.4)' },
-            { offset: 1, color: 'rgba(16, 185, 129, 0.05)' }
-          ])
-        },
-        itemStyle: { color: '#10b981' }
-      },
-      {
-        name: '新增用户',
-        type: 'bar',
-        data: data.newUsers,
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: '#f59e0b' },
-            { offset: 1, color: '#fbbf24' }
-          ]),
-          borderRadius: [4, 4, 0, 0]
-        }
+  try {
+    // 从学生列表中查找学生ID（这里简化处理，实际需要从API获取学生详情）
+    const studentsRes = await api.aiHealth.students({ keyword: warning.studentName })
+    if (studentsRes.success && studentsRes.data.length > 0) {
+      const student = studentsRes.data[0]
+      const detailRes = await api.aiHealth.studentDetail(student.id)
+      if (detailRes.success) {
+        studentDetail.value = detailRes.data
+        await nextTick()
+        renderScoreChart()
+        renderUsageChart()
       }
-    ]
-  })
-}
-
-const initCharts = () => {
-  // 主图表
-  updateMainChart()
-
-  // 饼图
-  if (pieChartRef.value) {
-    const chart = echarts.init(pieChartRef.value)
-    chart.setOption({
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      series: [{
-        type: 'pie',
-        radius: ['50%', '75%'],
-        center: ['50%', '50%'],
-        data: usageStats.value.map(item => ({
-          name: item.name,
-          value: item.value,
-          itemStyle: { color: item.color }
-        })),
-        label: { show: false },
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
-          }
-        }
-      }]
-    })
+    } else {
+      // 使用 mock 数据兜底
+      studentDetail.value = {
+        id: 1,
+        name: warning.studentName,
+        studentId: 'S000001',
+        department: '计算机学院',
+        dependenceIndex: warning.level === '重度' ? 82 : (warning.level === '中度' ? 62 : 42),
+        dependenceLevel: warning.level,
+        scoreTrend: warning.level === '重度' ? [65, 62, 60, 58, 55] : [72, 74, 75, 73, 76],
+        aiUsageComposition: warning.level === '重度'
+            ? [{ name: 'AI完成作业/编程', value: 80 }, { name: '自主学习+AI辅助', value: 20 }]
+            : [{ name: 'AI完成作业/编程', value: 45 }, { name: '自主学习+AI辅助', value: 55 }]
+      }
+      await nextTick()
+      renderScoreChart()
+      renderUsageChart()
+    }
+  } catch (e) {
+    console.error('获取学生详情失败:', e)
+    // mock 数据
+    studentDetail.value = {
+      id: 1,
+      name: warning.studentName,
+      studentId: 'S000001',
+      department: '计算机学院',
+      dependenceIndex: 62,
+      dependenceLevel: warning.level,
+      scoreTrend: [72, 74, 75, 73, 76],
+      aiUsageComposition: [
+        { name: 'AI完成作业/编程', value: 45 },
+        { name: '自主学习+AI辅助', value: 55 }
+      ]
+    }
+    await nextTick()
+    renderScoreChart()
+    renderUsageChart()
+  } finally {
+    detailLoading.value = false
   }
 }
 
-// 监听时间范围变化
-watch(chartTimeRange, () => {
-  updateMainChart()
+// 渲染成绩趋势图
+const renderScoreChart = () => {
+  if (!scoreChartRef.value || !studentDetail.value?.scoreTrend) return
+  if (scoreChart) scoreChart.dispose()
+
+  scoreChart = echarts.init(scoreChartRef.value)
+  const data = studentDetail.value.scoreTrend
+  const xAxisData = data.map((_, i) => `第${i + 1}周`)
+
+  scoreChart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '5%', containLabel: true },
+    xAxis: { type: 'category', data: xAxisData },
+    yAxis: { type: 'value', name: '成绩', min: 0, max: 100 },
+    series: [{
+      type: 'line',
+      smooth: true,
+      data: data,
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: { color: '#3b82f6', width: 2 },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(59, 130, 246, 0.3)' },
+          { offset: 1, color: 'rgba(59, 130, 246, 0.05)' }
+        ])
+      },
+      itemStyle: { color: '#3b82f6' },
+      label: { show: true, position: 'top', formatter: '{c}分' }
+    }]
+  })
+}
+
+// 渲染 AI 使用构成饼图
+const renderUsageChart = () => {
+  if (!usageChartRef.value || !studentDetail.value?.aiUsageComposition) return
+  if (usageChart) usageChart.dispose()
+
+  usageChart = echarts.init(usageChartRef.value)
+  usageChart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {d}%' },
+    legend: { orient: 'vertical', right: 10, top: 'center' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['45%', '50%'],
+      data: studentDetail.value.aiUsageComposition,
+      label: { show: true, formatter: '{b}: {d}%' },
+      emphasis: { scale: true }
+    }]
+  })
+}
+
+// 渲染迷你图表
+const renderMiniChart = () => {
+  if (!miniChartRef.value) return
+  if (miniChart) miniChart.dispose()
+
+  miniChart = echarts.init(miniChartRef.value)
+  miniChart.setOption({
+    tooltip: { show: false },
+    grid: { left: 0, right: 0, top: 0, bottom: 0 },
+    xAxis: { show: false, type: 'category', data: ['第1周', '第2周', '第3周', '第4周', '第5周', '第6周'] },
+    yAxis: { show: false },
+    series: [{
+      type: 'line',
+      smooth: true,
+      data: [62, 58, 56, 52, 49, 46],
+      lineStyle: { color: '#ef4444', width: 2 },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(239, 68, 68, 0.3)' },
+          { offset: 1, color: 'rgba(239, 68, 68, 0.05)' }
+        ])
+      },
+      symbol: 'none'
+    }]
+  })
+}
+
+// 处理预警操作
+const handleWarningAction = (warning, action) => {
+  if (action === 'message') {
+    ElMessage.info(`已向 ${warning.studentName} 发送学习提醒`)
+  } else if (action === 'meeting') {
+    ElMessage.info(`已为 ${warning.studentName} 安排教师面谈`)
+  }
+}
+
+// 窗口自适应
+const handleResize = () => {
+  miniChart?.resize()
+  scoreChart?.resize()
+  usageChart?.resize()
+}
+
+// ==================== 生命周期 ====================
+onMounted(() => {
+  fetchOverview()
+  fetchWarnings()
+  fetchAIStats()
+  fetchNotifications()
+  setTimeout(renderMiniChart, 100)
+  window.addEventListener('resize', handleResize)
 })
 
-onMounted(() => {
-  setTimeout(initCharts, 100)
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  miniChart?.dispose()
+  scoreChart?.dispose()
+  usageChart?.dispose()
 })
 </script>
 
 <style scoped>
 .admin-home {
   min-height: calc(100vh - 80px);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  color: white;
+  background: linear-gradient(135deg, #cde8f5 0%, #d4f1f9 100%);
   padding: 16px;
   border-radius: 20px;
   overflow: hidden;
@@ -615,68 +702,11 @@ onMounted(() => {
   gap: 16px;
 }
 
-/* 指标区域 */
+/* 核心指标 */
 .metrics-section {
   margin-bottom: 16px;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.admin-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.panel-header h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.system-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  font-size: 13px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-.status-dot.online {
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* 核心指标 */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -685,7 +715,8 @@ onMounted(() => {
 
 .metric-card {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 14px !important;
+  border-radius: 14px;
+  border: 1px rgba(64, 158, 255, 0.15);
   padding: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   color: #1f2937;
@@ -708,11 +739,13 @@ onMounted(() => {
   justify-content: center;
   font-size: 16px;
 }
+.metric-icon.blue { background: linear-gradient(135deg, #409eff, #66b1ff); }
+.metric-icon.green { background: linear-gradient(135deg, #67c23a, #85ce61); }
+.metric-icon.orange { background: linear-gradient(135deg, #e6a23c, #ebb563); }
+.metric-icon.purple { background: linear-gradient(135deg, #909399, #b0b3b8); }
 
-.metric-icon.blue { background: linear-gradient(135deg, #667eea, #764ba2); }
-.metric-icon.green { background: linear-gradient(135deg, #11998e, #38ef7d); }
-.metric-icon.orange { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.metric-icon.purple { background: linear-gradient(135deg, #a8edea, #fed6e3); color: #1a1a2e; }
+.header-icon.blue { background: linear-gradient(135deg, #409eff, #66b1ff); }
+.header-icon.purple { background: linear-gradient(135deg, #409eff, #66b1ff); }
 
 .metric-value {
   font-size: 22px;
@@ -740,7 +773,7 @@ onMounted(() => {
 /* 主内容区域 */
 .main-content {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr 1.2fr;
   gap: 10px;
   margin-top: 10px;
 }
@@ -754,7 +787,7 @@ onMounted(() => {
 /* 内容卡片 */
 .content-card {
   background: rgba(255, 255, 255, 0.95);
-  border-radius: 14px !important;
+  border-radius: 14px;
   padding: 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   color: #1f2937;
@@ -781,14 +814,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   font-size: 16px;
 }
 
-.header-icon.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
-.header-icon.red { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-.header-icon.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-.header-icon.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.header-icon.blue { background: linear-gradient(135deg, #667eea, #764ba2); }
+.header-icon.green { background: linear-gradient(135deg, #11998e, #38ef7d); }
+.header-icon.red { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.header-icon.purple { background: linear-gradient(135deg, #667eea, #764ba2); }
 
 .card-header h3 {
   margin: 0;
@@ -800,129 +832,6 @@ onMounted(() => {
   margin: 1px 0 0 0;
   font-size: 11px;
   color: #6b7280;
-}
-
-/* 图表区域 */
-.chart-container {
-  height: 160px;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-/* 确保所有卡片内部元素也有圆角 */
-.chart-section,
-.usage-section,
-.alerts-section,
-.manage-section {
-  border-radius: 14px !important;
-  overflow: hidden;
-}
-
-/* 功能使用统计 */
-.usage-grid {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px;
-}
-
-.chart-pie {
-  height: 120px;
-}
-
-.usage-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.usage-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: rgba(241, 245, 249, 0.8);
-  border-radius: 8px;
-}
-
-.usage-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.usage-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-
-.usage-name {
-  font-size: 12px;
-}
-
-.usage-data {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.usage-value {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.usage-percent {
-  font-size: 10px;
-  color: #9ca3af;
-}
-
-/* 系统告警 */
-.alerts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.alert-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(241, 245, 249, 0.8);
-}
-
-.alert-item.error { border-left: 3px solid #ef4444; }
-.alert-item.warning { border-left: 3px solid #f59e0b; }
-.alert-item.info { border-left: 3px solid #3b82f6; }
-
-.alert-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
-.alert-item.error .alert-icon { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-.alert-item.warning .alert-icon { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.alert-item.info .alert-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-
-.alert-content {
-  flex: 1;
-}
-
-.alert-title {
-  display: block;
-  font-size: 12px;
-  margin-bottom: 2px;
-}
-
-.alert-time {
-  font-size: 10px;
-  color: #9ca3af;
 }
 
 /* 快捷管理 */
@@ -937,14 +846,14 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 10px;
-  background: rgba(241, 245, 249, 0.8);
+  background: #f1f5f9;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .manage-item:hover {
-  background: rgba(226, 232, 240, 0.9);
+  background: #e2e8f0;
   transform: translateX(2px);
 }
 
@@ -971,46 +880,235 @@ onMounted(() => {
 
 .manage-count {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: #6b7280;
 }
 
-/* 操作日志 */
-.logs-list {
+/* 预警列表 */
+.warnings-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
-.log-item {
+.warning-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.warning-item:hover {
+  background: #f1f5f9;
+}
+
+.warning-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.warning-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.warning-student {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.warning-trigger {
+  margin: 0;
+  font-size: 11px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+/* AI概览统计 */
+.ai-overview-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.overview-stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  background: #f1f5f9;
   border-radius: 10px;
 }
 
-.log-content {
+.overview-stat .stat-label {
+  display: block;
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.overview-stat .stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.mini-chart-box {
+  height: 60px;
+}
+
+/* 今日概览 */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.overview-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.overview-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+}
+
+.overview-info {
   flex: 1;
 }
 
-.log-action {
+.overview-label {
   display: block;
-  font-size: 14px;
-  margin-bottom: 2px;
+  font-size: 11px;
+  color: #6b7280;
 }
 
-.log-action strong {
-  color: #667eea;
+.overview-value {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
-.log-time {
+/* 弹窗样式 */
+.student-detail-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.student-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.student-info {
+  flex: 1;
+}
+
+.student-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.student-info p {
+  margin: 2px 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.dependence-badge {
+  text-align: center;
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-width: 100px;
+}
+
+.dependence-badge.light { background: #dcfce7; }
+.dependence-badge.medium { background: #fef3c7; }
+.dependence-badge.heavy { background: #fee2e2; }
+
+.dependence-badge .score {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.dependence-badge.light .score { color: #10b981; }
+.dependence-badge.medium .score { color: #f59e0b; }
+.dependence-badge.heavy .score { color: #ef4444; }
+
+.dependence-badge .level {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #6b7280;
+}
+
+.detail-chart {
+  width: 100%;
+  height: 240px;
+}
+
+.warning-detail {
+  padding: 16px;
+}
+
+.warning-detail p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 /* 响应式 */
-@media (max-width: 1400px) {
+@media (max-width: 1200px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1023,145 +1121,11 @@ onMounted(() => {
   .metrics-grid {
     grid-template-columns: 1fr;
   }
-
-  .usage-grid {
+  .overview-grid {
     grid-template-columns: 1fr;
   }
-
   .manage-grid {
     grid-template-columns: 1fr;
   }
-}
-
-/* 今日概览 */
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.overview-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
-  transition: all 0.3s;
-}
-
-.overview-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.overview-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-}
-
-.overview-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.overview-label {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.overview-value {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-/* 今日重点事项 */
-.today-highlights {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.highlights-title {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #333;
-}
-
-.highlights-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.highlight-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 8px;
-  border-left: 3px solid #667eea;
-}
-
-.highlight-time {
-  font-size: 12px;
-  font-weight: 600;
-  color: #667eea;
-  min-width: 45px;
-}
-
-.highlight-text {
-  flex: 1;
-  font-size: 12px;
-  color: #374151;
-}
-
-/* 快速统计 */
-.quick-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.stat-row {
-  display: flex;
-  gap: 10px;
-}
-
-.stat-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  background: #f8fafc;
-  border-radius: 10px;
-}
-
-.stat-icon {
-  font-size: 20px;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #6b7280;
 }
 </style>

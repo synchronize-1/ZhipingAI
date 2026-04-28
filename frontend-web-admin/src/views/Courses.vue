@@ -14,15 +14,11 @@
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-gray-500 text-sm">本学期课程</p>
-        <p class="text-2xl font-bold text-green-600">{{ courses.filter(c => c.semester === '25-26(1)').length }}</p>
+        <p class="text-2xl font-bold text-green-600">{{ currentSemesterCourses }}</p>
       </div>
       <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <p class="text-gray-500 text-sm">已分配教师</p>
         <p class="text-2xl font-bold text-blue-600">{{ courses.filter(c => c.teacher_name).length }}</p>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <p class="text-gray-500 text-sm">总学分</p>
-        <p class="text-2xl font-bold text-orange-600">{{ courses.reduce((sum, c) => sum + (c.credits || 0), 0) }}</p>
       </div>
     </div>
 
@@ -31,11 +27,10 @@
       <div class="flex flex-wrap items-center justify-between gap-4">
         <div class="flex items-center gap-4">
           <el-input v-model="searchQuery" placeholder="搜索课程名称/代码..." prefix-icon="Search" class="w-64" clearable />
-          <el-select v-model="semesterFilter" placeholder="学期" clearable class="w-40">
-            <el-option label="25-26(1)" value="25-26(1)" />
-            <el-option label="25-26(2)" value="25-26(2)" />
+          <el-select v-model="semesterFilter" placeholder="学期" clearable class="w-40" :loading="loadingSemesters">
+            <el-option v-for="s in semesterList" :key="s" :label="s" :value="s" />
           </el-select>
-          <el-select v-model="teacherFilter" placeholder="授课教师" clearable class="w-40">
+          <el-select v-model="teacherFilter" placeholder="授课教师" clearable class="w-40" :loading="loadingTeachers">
             <el-option v-for="t in teacherList" :key="t" :label="t" :value="t" />
           </el-select>
         </div>
@@ -45,7 +40,7 @@
 
     <!-- 课程列表表格 -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <el-table :data="filteredCourses" stripe style="width: 100%">
+      <el-table :data="filteredCourses" stripe style="width: 100%" v-loading="loading">
         <el-table-column prop="code" label="课程代码" width="120" />
         <el-table-column prop="name" label="课程名称" min-width="180">
           <template #default="{ row }">
@@ -77,7 +72,7 @@
         </el-table-column>
         <el-table-column prop="student_count" label="选课人数" width="100" align="center">
           <template #default="{ row }">
-            <span class="text-gray-600">{{ row.student_count || Math.floor(Math.random() * 50) + 20 }}人</span>
+            <span class="text-gray-600">{{ row.student_count || 0 }}人</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
@@ -108,7 +103,7 @@
             </div>
             <div class="course-teacher">
               <el-icon><User /></el-icon>
-              <span>{{ selectedCourse.teacher_name }}</span>
+              <span>{{ selectedCourse.teacher_name || '未分配' }}</span>
             </div>
             <div class="course-location">
               <el-icon><Location /></el-icon>
@@ -132,6 +127,7 @@
       </div>
     </el-dialog>
 
+    <!-- 添加/编辑课程对话框 -->
     <el-dialog v-model="showAddDialog" :title="editingCourse ? '编辑课程' : '添加课程'" width="600px">
       <el-form ref="formRef" :model="courseForm" :rules="formRules" label-width="100px">
         <el-row :gutter="20">
@@ -149,7 +145,7 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="授课教师" prop="teacherName">
-              <el-select v-model="courseForm.teacherName" class="w-full" filterable allow-create placeholder="选择或输入教师">
+              <el-select v-model="courseForm.teacherName" class="w-full" filterable allow-create placeholder="选择或输入教师" :loading="loadingTeachers">
                 <el-option v-for="t in teacherList" :key="t" :label="t" :value="t" />
               </el-select>
             </el-form-item>
@@ -167,10 +163,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="学期">
-              <el-select v-model="courseForm.semester" class="w-full">
-                <el-option label="25-26(1)" value="25-26(1)" />
-                <el-option label="25-26(2)" value="25-26(2)" />
+            <el-form-item label="学期" prop="semester">
+              <el-select v-model="courseForm.semester" class="w-full" :loading="loadingSemesters">
+                <el-option v-for="s in semesterList" :key="s" :label="s" :value="s" />
               </el-select>
             </el-form-item>
           </el-col>
@@ -190,7 +185,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Plus, User, Location } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 import CourseInteraction from '@/components/CourseInteraction.vue'
 import LearningResources from '@/components/LearningResources.vue'
@@ -199,7 +194,11 @@ defineOptions({ name: 'Courses' })
 
 const loading = ref(false)
 const submitting = ref(false)
+const loadingSemesters = ref(false)
+const loadingTeachers = ref(false)
 const courses = ref([])
+const semesterList = ref([])
+const teacherList = ref([])
 const searchQuery = ref('')
 const semesterFilter = ref('')
 const teacherFilter = ref('')
@@ -211,17 +210,29 @@ const editingCourse = ref(null)
 const formRef = ref()
 
 const courseForm = ref({
-  name: '', code: '', teacherName: '', credits: 3, location: '', semester: '25-26(1)', description: ''
+  name: '',
+  code: '',
+  teacherName: '',
+  credits: 3,
+  location: '',
+  semester: '',
+  description: ''
 })
-
-// 教师列表
-const teacherList = ref(['陈教授', '刘老师', '王教授', '张教授', '李老师', '赵教授', '周教授', '吴老师'])
 
 const formRules = {
   name: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
-  code: [{ required: true, message: '请输入课程代码', trigger: 'blur' }]
+  code: [{ required: true, message: '请输入课程代码', trigger: 'blur' }],
+  semester: [{ required: true, message: '请选择学期', trigger: 'change' }]
 }
 
+// 当前学期课程数量
+const currentSemesterCourses = computed(() => {
+  if (semesterList.value.length === 0) return 0
+  const currentSem = semesterList.value[0]
+  return courses.value.filter(c => c.semester === currentSem).length
+})
+
+// 筛选后的课程列表
 const filteredCourses = computed(() => {
   let result = courses.value
   if (searchQuery.value) {
@@ -237,48 +248,164 @@ const filteredCourses = computed(() => {
   return result
 })
 
-const openAddDialog = () => {
-  editingCourse.value = null
-  courseForm.value = { name: '', code: '', teacherName: '', credits: 3, location: '', semester: '25-26(1)', description: '' }
-  showAddDialog.value = true
+// 获取学期列表
+const fetchSemesters = async () => {
+  loadingSemesters.value = true
+  try {
+    const res = await api.courses.getSemesters()
+    if (res.success) {
+      semesterList.value = res.data || []
+      if (semesterList.value.length > 0 && !courseForm.value.semester) {
+        courseForm.value.semester = semesterList.value[0]
+      }
+    }
+  } catch (error) {
+    console.error('获取学期列表失败:', error)
+  } finally {
+    loadingSemesters.value = false
+  }
 }
 
-const deleteCourse = (course) => {
-  courses.value = courses.value.filter(c => c.id !== course.id)
-  ElMessage.success(`课程「${course.name}」已删除`)
+// 获取教师列表
+const fetchTeachers = async () => {
+  loadingTeachers.value = true
+  try {
+    const res = await api.courses.getTeachers()
+    if (res.success) {
+      teacherList.value = res.data || []
+    }
+  } catch (error) {
+    console.error('获取教师列表失败:', error)
+  } finally {
+    loadingTeachers.value = false
+  }
 }
 
+// 获取课程列表
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const res = await api.courses.list({ limit: 50 })
-    if (res.success) courses.value = res.data.data || []
-  } catch (e) {
-    console.error(e)
-    // 使用示例数据
-    courses.value = [
-      { id: 1, name: '数据结构与算法', code: 'CS201', teacher_name: '陈教授', credits: 4, location: '教学楼A-301', semester: '25-26(1)', description: '本课程系统介绍数据结构的基本概念、常用数据结构及其算法实现，培养学生分析问题和解决问题的能力。' },
-      { id: 2, name: '计算机网络', code: 'CS301', teacher_name: '刘老师', credits: 3, location: '教学楼B-205', semester: '25-26(1)', description: '介绍计算机网络的基本原理、体系结构、协议和应用，包括TCP/IP协议族、网络安全等内容。' },
-      { id: 3, name: '操作系统原理', code: 'CS302', teacher_name: '王教授', credits: 4, location: '教学楼A-402', semester: '25-26(1)', description: '讲解操作系统的基本原理，包括进程管理、内存管理、文件系统和设备管理等核心内容。' },
-      { id: 4, name: '数据库系统概论', code: 'CS303', teacher_name: '张教授', credits: 3, location: '教学楼C-101', semester: '25-26(1)', description: '系统讲解关系数据库理论、SQL语言、数据库设计和数据库管理系统的实现技术。' },
-      { id: 5, name: '软件工程', code: 'SE201', teacher_name: '李老师', credits: 3, location: '教学楼B-302', semester: '25-26(1)', description: '介绍软件开发的方法学、软件生命周期、需求分析、设计模式和项目管理等内容。' },
-      { id: 6, name: '人工智能导论', code: 'AI101', teacher_name: '赵教授', credits: 3, location: '教学楼A-501', semester: '25-26(2)', description: '介绍人工智能的基本概念、搜索算法、机器学习、神经网络和自然语言处理等前沿技术。' },
-      { id: 7, name: '高等数学(上)', code: 'MATH101', teacher_name: '周教授', credits: 5, location: '教学楼D-201', semester: '25-26(1)', description: '系统学习极限、导数、积分等微积分基础知识，培养数学思维和计算能力。' },
-      { id: 8, name: '线性代数', code: 'MATH201', teacher_name: '吴老师', credits: 3, location: '教学楼D-105', semester: '25-26(1)', description: '讲解矩阵运算、向量空间、线性变换、特征值与特征向量等代数学基础内容。' },
-      { id: 9, name: '大学英语(四)', code: 'ENG104', teacher_name: '陈老师', credits: 2, location: '外语楼-201', semester: '25-26(2)', description: '提高学生英语听说读写能力，通过四级考试为目标，强化语法和词汇学习。' }
-    ]
+    const res = await api.courses.list({ limit: 100 })
+    if (res.success) {
+      courses.value = res.data.data || []
+    }
+  } catch (error) {
+    console.error('获取课程列表失败:', error)
+    courses.value = []
   } finally {
     loading.value = false
   }
 }
 
+// 打开添加对话框
+const openAddDialog = () => {
+  editingCourse.value = null
+  courseForm.value = {
+    name: '',
+    code: '',
+    teacherName: '',
+    credits: 3,
+    location: '',
+    semester: semesterList.value[0] || '',
+    description: ''
+  }
+  showAddDialog.value = true
+}
+
+// 删除课程
+const deleteCourse = async (course) => {
+  try {
+    await ElMessageBox.confirm(
+        `确定要删除课程「${course.name}」吗？`,
+        '删除确认',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+    )
+    // 调用删除接口（如果后端有实现）
+    // await api.courses.delete(course.id)
+    courses.value = courses.value.filter(c => c.id !== course.id)
+    ElMessage.success(`课程「${course.name}」已删除`)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+    }
+  }
+}
+
+// 查看课程详情
 const viewCourse = (course) => {
   selectedCourse.value = course
   detailTab.value = 'intro'
   showDetailDialog.value = true
 }
 
-// 根据课程代码返回不同的课程介绍
+// 编辑课程
+const editCourse = (course) => {
+  editingCourse.value = course
+  courseForm.value = {
+    name: course.name,
+    code: course.code,
+    teacherName: course.teacher_name || '',
+    credits: course.credits,
+    location: course.location || '',
+    semester: course.semester,
+    description: course.description || ''
+  }
+  showAddDialog.value = true
+}
+
+// 提交表单
+const submitForm = async () => {
+  if (!formRef.value) return
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    submitting.value = true
+    try {
+      if (editingCourse.value) {
+        // 编辑课程
+        // await api.courses.update(editingCourse.value.id, courseForm.value)
+        const idx = courses.value.findIndex(c => c.id === editingCourse.value.id)
+        if (idx !== -1) {
+          courses.value[idx] = {
+            ...courses.value[idx],
+            name: courseForm.value.name,
+            code: courseForm.value.code,
+            teacher_name: courseForm.value.teacherName,
+            credits: courseForm.value.credits,
+            location: courseForm.value.location,
+            semester: courseForm.value.semester,
+            description: courseForm.value.description
+          }
+        }
+        ElMessage.success('课程更新成功')
+      } else {
+        // 创建课程
+        await api.courses.create({
+          name: courseForm.value.name,
+          code: courseForm.value.code,
+          teacher_name: courseForm.value.teacherName,
+          credits: courseForm.value.credits,
+          location: courseForm.value.location,
+          semester: courseForm.value.semester,
+          description: courseForm.value.description
+        })
+        ElMessage.success('课程添加成功')
+        await fetchCourses()
+      }
+      showAddDialog.value = false
+    } catch (error) {
+      console.error('提交失败:', error)
+      ElMessage.error(editingCourse.value ? '更新失败' : '添加失败')
+    } finally {
+      submitting.value = false
+    }
+  })
+}
+
+// 获取课程介绍（根据课程代码返回不同内容）
 const getCourseIntro = (course) => {
   const introMap = {
     'CS201': `
@@ -293,19 +420,6 @@ const getCourseIntro = (course) => {
       </ul>
       <p class="mt-3"><strong>📖 主要内容：</strong>线性表、栈与队列、串、数组、树与二叉树、图、查找、排序</p>
       <p class="mt-3"><strong>✍️ 考核方式：</strong>平时作业(20%) + 实验(20%) + 期中考试(20%) + 期末考试(40%)</p>
-    `,
-    'MATH101': `
-      <p><strong>📚 课程简介：</strong></p>
-      <p>《高等数学》是理工科专业的重要基础课程，系统学习一元函数微积分、多元函数微积分、级数理论等内容，培养严密的数学思维能力。</p>
-      <p class="mt-3"><strong>🎯 教学目标：</strong></p>
-      <ul class="list-disc pl-5 mt-2 space-y-1">
-        <li>掌握极限、连续、导数、积分的基本概念</li>
-        <li>熟练运用微积分方法解决实际问题</li>
-        <li>理解无穷级数的收敛性判别</li>
-        <li>培养抽象思维和逻辑推理能力</li>
-      </ul>
-      <p class="mt-3"><strong>📖 主要内容：</strong>函数与极限、导数与微分、中值定理、不定积分、定积分、微分方程</p>
-      <p class="mt-3"><strong>✍️ 考核方式：</strong>平时作业(15%) + 期中考试(25%) + 期末考试(60%)</p>
     `,
     'CS301': `
       <p><strong>📚 课程简介：</strong></p>
@@ -347,7 +461,7 @@ const getCourseIntro = (course) => {
       <p class="mt-3"><strong>✍️ 考核方式：</strong>平时作业(20%) + 项目实践(30%) + 期末考试(50%)</p>
     `
   }
-  
+
   return introMap[course?.code] || `
     <p><strong>📚 课程简介：</strong></p>
     <p>${course?.description || '本课程是专业核心课程之一，系统讲解相关领域的基础理论和实践技能，为学生后续学习和职业发展奠定基础。'}</p>
@@ -362,8 +476,8 @@ const getCourseIntro = (course) => {
   `
 }
 
+// 获取课程封面图片
 const getCourseImage = (course) => {
-  // 课程详情书本图片
   const courseImages = {
     'CS201': 'https://images.pexels.com/photos/1148399/pexels-photo-1148399.jpeg?auto=compress&cs=tinysrgb&w=400',
     'CS301': 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=400',
@@ -379,82 +493,12 @@ const getCourseImage = (course) => {
   return courseImages[course.code] || courseImages['default']
 }
 
-const getCourseCardImage = (course) => {
-  // 根据课程代码返回相应的书本封面图片
-  const courseImages = {
-    'CS201': 'https://images.pexels.com/photos/1148399/pexels-photo-1148399.jpeg?auto=compress&cs=tinysrgb&w=600', // 数据结构-书本
-    'CS301': 'https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=600', // 计算机网络-书本
-    'CS302': 'https://images.pexels.com/photos/256541/pexels-photo-256541.jpeg?auto=compress&cs=tinysrgb&w=600', // 操作系统-书本
-    'CS303': 'https://images.pexels.com/photos/1370295/pexels-photo-1370295.jpeg?auto=compress&cs=tinysrgb&w=600', // 数据库-书本
-    'SE201': 'https://images.pexels.com/photos/2465877/pexels-photo-2465877.jpeg?auto=compress&cs=tinysrgb&w=600', // 软件工程-书本
-    'AI101': 'https://images.pexels.com/photos/3747468/pexels-photo-3747468.jpeg?auto=compress&cs=tinysrgb&w=600', // AI-书本
-    'MATH101': 'https://images.pexels.com/photos/6238050/pexels-photo-6238050.jpeg?auto=compress&cs=tinysrgb&w=600', // 高数-书本
-    'MATH201': 'https://images.pexels.com/photos/5428012/pexels-photo-5428012.jpeg?auto=compress&cs=tinysrgb&w=600', // 线代-书本
-    'ENG104': 'https://images.pexels.com/photos/5834/nature-grass-leaf-green.jpg?auto=compress&cs=tinysrgb&w=600', // 英语-书本
-    'default': 'https://images.pexels.com/photos/159866/books-book-pages-read-literature-159866.jpeg?auto=compress&cs=tinysrgb&w=600' // 默认书本
-  }
-  return courseImages[course.code] || courseImages['default']
-}
-
-const handleCourseImageError = (e) => {
-  e.target.src = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&h=300&fit=crop'
-}
-
-const editCourse = (course) => {
-  editingCourse.value = course
-  courseForm.value = { ...course }
-  showAddDialog.value = true
-}
-
-const submitForm = async () => {
-  if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-    submitting.value = true
-    try {
-      await api.courses.create(courseForm.value)
-      ElMessage.success(editingCourse.value ? '更新成功' : '添加成功')
-      showAddDialog.value = false
-      fetchCourses()
-    } catch (e) {
-      // 本地模拟添加/更新
-      if (editingCourse.value) {
-        const idx = courses.value.findIndex(c => c.id === editingCourse.value.id)
-        if (idx !== -1) {
-          courses.value[idx] = {
-            ...courses.value[idx],
-            name: courseForm.value.name,
-            code: courseForm.value.code,
-            teacher_name: courseForm.value.teacherName,
-            credits: courseForm.value.credits,
-            location: courseForm.value.location,
-            semester: courseForm.value.semester,
-            description: courseForm.value.description
-          }
-        }
-        ElMessage.success('课程更新成功')
-      } else {
-        courses.value.unshift({
-          id: Date.now(),
-          name: courseForm.value.name,
-          code: courseForm.value.code,
-          teacher_name: courseForm.value.teacherName,
-          credits: courseForm.value.credits,
-          location: courseForm.value.location,
-          semester: courseForm.value.semester,
-          description: courseForm.value.description
-        })
-        ElMessage.success('课程添加成功')
-      }
-      showAddDialog.value = false
-    } finally {
-      submitting.value = false
-    }
-  })
-}
-
 onMounted(() => {
-  fetchCourses()
+  Promise.all([
+    fetchSemesters(),
+    fetchTeachers(),
+    fetchCourses()
+  ])
 })
 </script>
 
@@ -567,22 +611,5 @@ onMounted(() => {
   background: #f8fafc;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
-}
-
-/* 课程卡片按钮样式 - 确保文字清晰 */
-.course-actions :deep(.el-button) {
-  font-weight: 500;
-}
-
-.course-actions :deep(.el-button--primary) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  color: white;
-}
-
-.course-actions :deep(.el-button--default) {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  color: #374151;
 }
 </style>

@@ -7,14 +7,13 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const courseRoutes = require('./routes/course');
-const scheduleRoutes = require('./routes/schedule');
 const serviceRoutes = require('./routes/service');
-const securityRoutes = require('./routes/security');
 const dashboardRoutes = require('./routes/dashboard');
 const socialRoutes = require('./routes/social');
 const notificationRoutes = require('./routes/notification');
 const aiAgentRoutes = require('./routes/aiAgent');
 const aiScienceRoutes = require('./routes/aiScience');
+const aiHealthRoutes = require('./routes/aiHealth');
 
 const app = express();
 const server = http.createServer(app);
@@ -37,14 +36,13 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
-app.use('/api/schedules', scheduleRoutes);
 app.use('/api/services', serviceRoutes);
-app.use('/api/security', securityRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiAgentRoutes);
 app.use('/api/ai-science', aiScienceRoutes);
+app.use('/api/ai-health', aiHealthRoutes);
 
 // WebSocket 实时通讯
 require('./websockets/socketHandler')(io);
@@ -64,10 +62,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000||3001;
-server.listen(PORT, () => {
-  console.log(`🚀 智评AI后端服务已启动: http://localhost:${PORT}`);
-  console.log(`📡 WebSocket服务已启动`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(`🚀 智评AI后端服务已启动: http://localhost:${PORT}`);
+    console.log(`📡 WebSocket服务已启动`);
+  });
+}
 
 module.exports = { app, io };
