@@ -58,18 +58,20 @@ export default {
     list: params => request.get('/courses', { params }),
     get: id => request.get(`/courses/${id}`),
     create: data => request.post('/courses', data),
-    students: id => request.get(`/courses/${id}/students`),
-    recommend: () => request.get('/courses/recommend/resources')
+    update: (id, data) => request.put(`/courses/${id}`, data),  // 新增更新接口
+    delete: id => request.delete(`/courses/${id}`),                             // 新增删除接口
+    getSemesters: () => request.get('/courses/semesters'),       // 新增获取学期列表
+    getTeachers: () => request.get('/courses/teachers')          // 新增获取教师列表
   },
   // 服务模块
-  services: {
-    createRepair: data => request.post('/services/repairs', data),
-    books: params => request.get('/services/books', { params }),
-    borrowBook: id => request.post(`/services/books/${id}/borrow`),
-    canteens: () => request.get('/services/canteens'),
-    canteenCrowd: () => request.get('/services/canteens/crowd'),
-    menu: id => request.get(`/services/canteens/${id}/menu`),
-  },
+  // services: {
+  //   createRepair: data => request.post('/services/repairs', data),
+  //   books: params => request.get('/services/books', { params }),
+  //   borrowBook: id => request.post(`/services/books/${id}/borrow`),
+  //   canteens: () => request.get('/services/canteens'),
+  //   canteenCrowd: () => request.get('/services/canteens/crowd'),
+  //   menu: id => request.get(`/services/canteens/${id}/menu`),
+  // },
   dashboard: {
     overview: () => request.get('/dashboard/overview'),
     aiStats: () => request.get('/dashboard/ai-stats')
