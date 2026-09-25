@@ -86,8 +86,8 @@ class Course {
 
   // 获取AI推荐学习资源
   static async getRecommendedResources(studentId, limit = 5) {
-    // 模拟AI学习分析，基于学生历史学习数据推荐
-    const [rows] = await pool.execute(`
+    const limitNum = parseInt(limit) || 5;
+    const [rows] = await pool.query(`
       SELECT lr.*, c.name as course_name
       FROM learning_resources lr
       LEFT JOIN courses c ON lr.course_id = c.id
@@ -95,8 +95,8 @@ class Course {
         SELECT course_id FROM student_courses WHERE student_id = ?
       )
       ORDER BY lr.views DESC, lr.rating DESC
-      LIMIT ?
-    `, [studentId, limit]);
+      LIMIT ${limitNum}
+    `, [studentId]);
     
     return rows;
   }

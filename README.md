@@ -1,394 +1,240 @@
-# 🎓 智评AI
+# 智评校园 SmartCampus
 
-<div align="center">
+> 面向中小学的教学质量评估与学生成长档案管理平台
 
+## 项目简介
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
-[![Vue Version](https://img.shields.io/badge/vue-3.4.0-brightgreen)](https://vuejs.org/)
-[![MySQL Version](https://img.shields.io/badge/mysql-8.0%2B-blue)](https://www.mysql.com/)
-[![Express Version](https://img.shields.io/badge/express-4.18%2B-lightgrey)](https://expressjs.com/)
+智评校园是一个以**教学质量评估**和**学生成长档案**为核心的智慧校园管理系统。系统采用前后端分离架构，通过数据驱动的学情分析帮助教师和管理者精准掌握教学效果，同时为每位学生建立贯穿在校期间的综合成长档案。
 
-[功能特性](#-功能特性) • [技术栈](#️-技术栈) • [快速开始](#-快速开始) • [项目结构](#-项目结构) • [文档](#-文档)
+### 核心价值
 
-</div>
+- **教学质量评估**：成绩录入、班级/年级学情分析、学生个人画像，数据驱动教学改进
+- **学生成长档案**：技能、荣誉、心理健康、学期评语的全维度成长记录
+- **AI 赋能**：DeepSeek AI 嵌入具体教学场景（学情诊断、智能评语），不做独立聊天玩具
 
----
+## 技术栈
 
-## 📋 目录
+| 层级 | 技术 | 版本 |
+|------|------|------|
+| 前端 | Vue 3 + Vite + Element Plus + ECharts | Vue 3.4 / Vite 5.0 |
+| 后端 | Node.js + Express + MySQL 8.0+ | Express 4.18 |
+| 认证 | JWT + bcryptjs | - |
+| 实时通信 | Socket.IO | 4.7 |
+| AI 服务 | DeepSeek API（可选） | - |
+| OCR | Umi-OCR 本地服务（可选） | - |
 
-- [项目简介](#-项目简介)
-- [核心功能](#-核心功能)
-- [AI功能亮点](#-ai功能亮点)
-- [技术栈](#️-技术栈)
-- [项目结构](#-项目结构)
-- [快速开始](#-快速开始)
-- [环境配置](#-环境配置)
-- [文档](#-文档)
-- [贡献指南](#-贡献指南)
-- [许可证](#-许可证)
-
----
-
-## 🎯 项目简介
-
-**智评AI，采用前后端分离架构，集成AI技术，为管理者、学生、教师的AI健康使用而服务
-
-### 🏗️ 项目组成
+## 项目结构
 
 ```
-📦 SmartCampus
- ┣ 🖥️ Web管理后台 (Vue 3 + Element Plus)
- ┃  ┣ 数据可视化大屏
- ┃  ┣ 完整的管理功能
- ┃  ┗ AI智能助手
- ┣ 📱 移动端应用 (uni-app)
- ┃  ┣ H5 / 微信小程序
- ┃  ┣ Android / iOS
- ┃  ┗ 语音助手
- ┗ ⚙️ 后端API服务 (Node.js + Express + MySQL)
-    ┣ RESTful API
-    ┣ WebSocket实时通讯
-    ┗ AI服务集成
+SmartCampus-main/
+├── backend-api/                  # 后端 API 服务
+│   ├── src/
+│   │   ├── config/               # 数据库 & 统一配置
+│   ├── middleware/               # 认证、错误处理
+│   ├── models/                   # 数据模型层（M）
+│   ├── services/                 # 业务服务层（S）
+│   ├── routes/                   # 路由层（C）
+│   ├── utils/                    # 工具函数
+│   ├── migrations/               # 数据库迁移系统
+│   │   ├── index.js              # 迁移运行器
+│   │   ├── V0.0.1_init_users.js  # 用户表
+│   │   ├── V0.0.2_seed_base_users.js
+│   │   ├── V1.0.0_init_core_tables.js  # 12 张核心表
+│   │   └── seed/seed_core_data.js     # 种子数据
+│   └── scripts/initDatabase.js   # 数据库初始化
+├── frontend-web-admin/           # Web 管理前端
+│   └── src/
+│       ├── api/                  # API 调用层
+│       ├── components/common/     # 公共组件（DataTable 等）
+│       ├── composables/          # 组合式函数
+│       ├── views/
+│       │   ├── teaching/         # 教学质量评估页面（9 个）
+│       │   └── portfolio/        # 成长档案页面（6 个）
+│       ├── router/               # 路由配置
+│       └── stores/               # Pinia 状态管理
+├── docs/                         # 项目文档
+└── datasets/                     # 数据集
 ```
 
-### ⭐ 核心特色
+## 快速开始
 
-- 🤖 **AI赋能** - 集成DeepSeek大语言模型，提供智能对话、学习辅导、情感分析等AI功能
-- 📷 **OCR识别** - 本地Umi-OCR服务，图片文字识别，保护隐私
-- 🎓 **智慧教学** - 智能课表、在线学习、AI学习助手
-- 💡 **个性化** - 成长档案、情感分析、心理建议
-- 📊 **数据可视化** - ECharts实时数据大屏
-- 🎤 **语音助手** - AI语音交互查询
-- 🔄 **实时通讯** - WebSocket实时数据推送
+### 环境要求
 
----
+- Node.js 18+
+- MySQL 8.0+
+- npm 9+
 
-## ✨ 核心功能
+### 安装步骤
 
-### 🖥️ Web管理后台
-
-#### 管理功能
-- 📊 **数据可视化大屏** - 教室使用率、能耗监测、人流热力图、活动参与度
-- 👥 **用户管理** - 学生、教师、管理员的增删改查和权限管理
-- 📚 **课程管理** - 课程创建、编辑、删除、教师分配
-
-#### AI功能模块
-- 🤖 **AI智能助手** - 右下角悬浮助手，支持课表查询、教室查询、智能问答
-- 📝 **AI学习助手** - 作业辅导、知识问答、图片识别OCR
-- ✍️ **AI写作助手** - 作文写作、文章续写、创意写作、文章润色
-- 😊 **AI情感分析** - 情感识别、情感强度分析、关键词提取、心理建议
-- 🔬 **AI科普乐园** - AI对话、AI写诗、AI写故事、OCR文字识别
-- 📷 **AI智能识别** - 图片文字识别、公式识别、手写文字识别
-
-
-## 🤖 AI功能亮点
-
-本项目深度集成AI技术，提供多场景智能服务：
-
-### 1️⃣ DeepSeek大语言模型集成
-- **智能对话** - 支持多轮对话，理解上下文
-- **学习辅导** - 作业解答、知识讲解、学习建议
-- **写作助手** - 作文创作、文章续写、内容润色
-- **情感分析** - 文本情感识别、心理健康建议
-
-### 2️⃣ Umi-OCR本地识别
-- **图片文字识别** - 支持印刷体、手写体
-- **公式识别** - 数学公式、化学方程式
-- **多语言支持** - 中文、英文等多语言识别
-- **隐私保护** - 本地处理，数据不上传
-
-### 3️⃣ 智能课表助手
-- **自然语言查询** - "今天有什么课？"、"明天第一节是什么课？"
-- **智能解析** - 前端智能解析课表数据
-- **追问建议** - 自动生成相关追问
-
-### 4️⃣ 情感分析系统
-- **情感倾向识别** - 积极/消极/中性
-- **情感强度分析** - 0-100分值
-- **关键词提取** - 识别情感关键词
-- **心理建议** - AI生成个性化建议
-
----
-
-## 🛠️ 技术栈
-
-### 后端技术
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Node.js | 18+ | JavaScript运行环境 |
-| Express.js | 4.18+ | Web应用框架 |
-| MySQL | 8.0+ | 关系型数据库 |
-| mysql2 | 3.6+ | MySQL驱动 |
-| jsonwebtoken | 9.0+ | JWT认证 |
-| bcryptjs | 2.4+ | 密码加密 |
-| Socket.IO | 4.7+ | WebSocket实时通讯 |
-| multer | 1.4+ | 文件上传中间件 |
-| axios | 1.6+ | HTTP客户端 |
-| dotenv | 16.3+ | 环境变量管理 |
-| node-cron | 3.0+ | 定时任务 |
-
-### Web前端技术
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Vue | 3.4+ | 渐进式JavaScript框架 |
-| Vite | 5.0+ | 下一代前端构建工具 |
-| Element Plus | 2.4+ | Vue 3 UI组件库 |
-| Pinia | 2.1+ | Vue状态管理 |
-| Vue Router | 4.2+ | Vue官方路由 |
-| ECharts | 5.4+ | 数据可视化图表库 |
-| axios | 1.6+ | HTTP客户端 |
-| Socket.IO Client | 4.7+ | WebSocket客户端 |
-| Sass | 1.69+ | CSS预处理器 |
-| TailwindCSS | 3.4+ | 实用优先的CSS框架 |
-| dayjs | 1.11+ | 轻量级日期处理库 |
-
-
-### AI服务
-| 服务 | 说明 |
-|------|------|
-| DeepSeek API | 大语言模型服务，提供智能对话、写作、分析等功能 |
-| Umi-OCR | 本地OCR服务，图片文字识别 |
-
----
-
-## 🚀 快速开始
-
-### 📋 环境要求
-
-| 软件 | 版本要求 | 说明 |
-|------|---------|------|
-| Node.js | 18.0+ | JavaScript运行环境 |
-| MySQL | 8.0+ | 关系型数据库 |
-| npm | 9.0+ | 包管理器 |
-
-### 📦 安装步骤
-
-#### 1️⃣ 克隆项目
-
-- 克隆项目，cd对应文件夹
-
-#### 2️⃣ 安装依赖
+1. **安装依赖**
 
 ```bash
-# 方式一：一键安装所有模块依赖（推荐）
+# 根目录一键安装
 npm run install:all
 
-# 方式二：分别安装各模块依赖
+# 或分别安装
 cd backend-api && npm install
 cd ../frontend-web-admin && npm install
-cd ../mobile-app && npm install
 ```
 
-> **注意**: 首次安装可能需要较长时间，请耐心等待
-
-#### 3️⃣ 配置数据库
-
-1. 创建MySQL数据库：
+2. **配置数据库**
 
 ```sql
 CREATE DATABASE smart_campus CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-2. 复制环境变量配置文件：
+3. **配置环境变量**
 
 ```bash
 cd backend-api
 cp .env.example .env
+# 编辑 .env 填入数据库密码和 API Key
 ```
 
-3. 编辑 `backend-api/.env` 文件：
+4. **初始化数据库**
+
+```bash
+cd backend-api
+npm run init:db          # 创建所有表 + 管理员账号
+node src/migrations/index.js     # 执行迁移（核心表）
+node src/migrations/seed/seed_core_data.js  # 插入种子数据
+```
+
+5. **启动服务**
+
+```bash
+# 根目录一键启动前后端
+npm start
+
+# 或分别启动
+cd backend-api && npm run dev       # → http://localhost:3000
+cd ../frontend-web-admin && npm run dev  # → http://localhost:5173
+```
+
+6. **访问系统**
+
+打开浏览器访问 http://localhost:5173
+
+### 测试账号
+
+| 角色 | 用户名 | 密码 |
+|------|--------|------|
+| 管理员 | admin | admin123 |
+
+## 核心功能模块
+
+### P0 - MVP 核心（已开发）
+
+#### 教学质量评估中心
+
+| 功能 | 说明 |
+|------|------|
+| 考试管理 | 创建/编辑/删除考试，配置考试科目、满分、及格分 |
+| 成绩管理 | 批量导入成绩，自动计算分数等级、班级排名、年级排名 |
+| 班级学情分析 | 各科统计、分数段分布、及格率/优秀率、薄弱科目识别 |
+| 年级学情分析 | 各班平均分对比、学科雷达图、优秀/薄弱班级 |
+| 学生学情分析 | 成绩趋势、各科雷达图、优势/薄弱学科、排名变化 |
+| 班级管理 | 班级 CRUD、班主任分配、学科教师配置 |
+| 学科管理 | 学科 CRUD、满分配置 |
+
+#### 学生成长档案
+
+| 功能 | 说明 |
+|------|------|
+| 档案总览 | 基本信息、技能/荣誉统计、成绩趋势、心理状态、最新评语 |
+| 技能记录 | 分类管理（学术/体育/艺术/技术）、1-5 星等级、教师认证 |
+| 荣誉记录 | 级别管理（校级→国际级）、类型分类、证明材料 |
+| 心理健康 | 测评记录、情绪指数趋势、各维度雷达图、压力水平追踪 |
+| 学生评语 | 学期评语、AI 智能生成（V1.0）、多种风格、来源标记 |
+| 班级档案 | 班级学生档案列表，教师查看全班学生成长概况 |
+
+### P1 - V1.0 规划中
+
+- AI 学情诊断报告（班级 + 个人）
+- AI 智能评语生成
+- 课程课表管理
+- 校园通知系统
+- 校园服务（食堂、图书馆）
+
+### P2 - V2.0 规划中
+
+- OCR 成绩录入
+- 心理健康测评系统
+- 活动管理
+- 选课系统
+
+## 后端架构
+
+采用三层架构（Model → Service → Route）：
+
+```
+Route (routes/)        → 接收请求，参数校验，权限检查
+  ↓
+Service (services/)    → 业务逻辑编排，数据聚合
+  ↓
+Model (models/)        → 数据库 CRUD，SQL 查询
+```
+
+- **统一响应格式**：`{ code, data, message }`
+- **统一错误处理**：`middleware/errorHandler.js`
+- **数据库迁移**：`migrations/` 目录管理表结构变更
+- **权限控制**：JWT + 三角色分级（admin/teacher/student）
+
+## API 文档
+
+完整的 API 接口文档见 [docs/API接口文档.md](docs/API接口文档.md)。
+
+## 文档索引
+
+| 文档 | 说明 |
+|------|------|
+| [项目规划方案](docs/项目规划方案.md) | 项目定位、需求分析、架构重构、开发路线图 |
+| [API 接口文档](docs/API接口文档.md) | 全部接口的请求/响应格式说明 |
+| [项目技术文档](docs/项目技术文档.md) | 技术架构、数据库设计、开发规范 |
+| [三端交互流程](docs/三端交互流程.md) | 管理员/教师/学生角色交互流程 |
+
+## 环境变量配置
+
+编辑 `backend-api/.env`：
 
 ```env
-# 数据库配置
+# 数据库
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=你的MySQL密码
 DB_NAME=smart_campus
 
-# 服务器配置
+# 服务器
 PORT=3000
-JWT_SECRET=your-secret-key-change-this
+JWT_SECRET=你的JWT密钥
 
-# DeepSeek AI配置（可选）
-DEEPSEEK_API_KEY=你的DeepSeek_API_Key
+# AI（可选）
+DEEPSEEK_API_KEY=你的API Key
 DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
 
-# Umi-OCR配置（可选）
+# OCR（可选）
 UMI_OCR_URL=http://127.0.0.1:1224/api/ocr
 ```
 
-#### 4️⃣ 初始化数据库
+## 常见问题
 
+**数据库连接失败？** 检查 MySQL 服务是否启动，`.env` 配置是否正确。
+
+**登录返回 401？** 确认已执行 `npm run init:db` 创建管理员账号，密码已 bcrypt 加密。
+
+**AI 功能不可用？** 检查 `.env` 中 DeepSeek API Key 是否配置，API 是否有余额。
+
+**端口被占用？**
 ```bash
-cd backend-api
-npm run init:db
+netstat -ano | findstr :3000    # 查找占用进程
+taskkill /PID <进程号> /F        # 结束进程
 ```
 
-成功后会显示：
-```
-✅ 数据库初始化成功！（暂时只开发了管理员端口，融合了学生端的部分内容）
-✅ 已创建测试账号：
-   管理员: admin / admin123
-```
+## 许可证
 
-#### 5️⃣ 启动项目
+MIT License
 
-```bash
-# 启动后端服务
-cd backend-api
-npm run dev
-# 后端服务运行在: http://localhost:3000
+## 贡献
 
-# 新开终端，启动Web前端
-cd frontend-web-admin
-npm run dev
-# Web前端运行在: http://localhost:5173
-
-# 新开终端，启动移动端（可选）
-cd mobile-app
-npm run dev:h5
-# 移动端运行在: http://localhost:8080
-```
-
-#### 6️⃣ 访问系统
-
-- **Web管理后台**: http://localhost:5173
-- **后端API**: http://localhost:3000
-- **移动端H5**: http://localhost:8080
-
-### 👤 测试账号
-
-| 角色 | 用户名 | 密码 | 权限说明 |
-|------|--------|------|---------|
-| 管理员 | admin | admin123 | 拥有所有权限 |
-
----
-
-## ⚙️ 环境配置
-
-### DeepSeek AI配置（可选）
-
-如需使用AI功能，请配置DeepSeek API：
-
-1. 访问 [DeepSeek开放平台](https://platform.deepseek.com/)
-2. 注册并创建API密钥
-3. 在 `backend-api/.env` 中配置：
-   ```env
-   DEEPSEEK_API_KEY=sk-your-api-key
-   DEEPSEEK_API_URL=https://api.deepseek.com/v1/chat/completions
-   ```
-
-### Umi-OCR配置（可选）
-
-如需使用OCR文字识别功能：
-
-1. 下载 [Umi-OCR](https://github.com/hiroi-sora/Umi-OCR)
-2. 运行Umi-OCR并开启HTTP服务（端口1224）
-3. 在 `backend-api/.env` 中配置：
-   ```env
-   UMI_OCR_URL=http://127.0.0.1:1224/api/ocr
-   ```
-
----
-
-## 📚 文档
-
-- 📖 **[三端交互流程](docs/三端交互流程.md)** - 管理员、教师、学生交互流程
-- 🔧 **[项目技术文档](./docs/项目技术文档.md)** - 完整的技术架构、API文档和开发指南
-
-
-## 🤝 贡献指南
-
-欢迎贡献代码！请遵循以下步骤：
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
-### 提交规范
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-**Type类型**:
-- `feat`: 新功能
-- `fix`: 修复bug
-- `docs`: 文档更新
-- `style`: 代码格式调整
-- `refactor`: 重构
-- `test`: 测试相关
-- `chore`: 构建/工具链相关
-
----
-
-## 📝 开发计划
-
-- ……
----
-
-## ❓ 常见问题
-
-### 1. 安装依赖失败？
-```bash
-# 清除缓存重试
-npm cache clean --force
-npm install
-```
-
-### 2. 数据库连接失败？
-- 检查MySQL服务是否启动
-- 确认 `.env` 配置是否正确
-- 检查数据库用户权限
-
-### 3. AI功能无法使用？
-- 确认DeepSeek API Key是否配置
-- 检查API Key是否有余额
-- 查看后端日志确认错误信息
-
-### 4. 端口被占用？
-```bash
-# Windows
-netstat -ano | findstr :3000
-taskkill /PID <进程号> /F
-
-# Linux/Mac
-lsof -i :3000
-kill -9 <进程号>
-```
-
----
-
-## 📄 许可证
-
-本项目采用 [MIT](LICENSE) 许可证
-
----
-
-## 🙏 致谢
-
-感谢以下开源项目：
-
-- [Vue.js](https://vuejs.org/)
-- [Element Plus](https://element-plus.org/)
-- [Express.js](https://expressjs.com/)
-- [uni-app](https://uniapp.dcloud.io/)
-- [ECharts](https://echarts.apache.org/)
-- [DeepSeek](https://www.deepseek.com/)
-- [Umi-OCR](https://github.com/hiroi-sora/Umi-OCR)
-
-
-<div align="center">
-
-如果这个项目对你有帮助，请给个 ⭐️ Star 支持一下！
-
-Made with ❤️ by synduality
-
-</div>
+欢迎提交 Issue 和 Pull Request。提交规范：`<type>(<scope>): <subject>`（feat/fix/docs/refactor/chore）。

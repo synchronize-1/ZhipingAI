@@ -20,11 +20,12 @@ class Social {
     }
     
     const countParams = [...params];
-    query += ' ORDER BY a.start_time DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
+    const limitNum = parseInt(limit) || 10;
+    const offsetNum = parseInt(offset) || 0;
+    query += ` ORDER BY a.start_time DESC LIMIT ${limitNum} OFFSET ${offsetNum}`;
     
-    const [rows] = await pool.execute(query, params);
-    const [countResult] = await pool.execute(countQuery, countParams);
+    const [rows] = await pool.query(query, params);
+    const [countResult] = await pool.query(countQuery, countParams);
     
     return { data: rows, total: countResult[0].total, page, limit };
   }

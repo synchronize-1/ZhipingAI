@@ -141,6 +141,86 @@ const routes = [
                 name: 'AISentiment',
                 component: () => import('@/views/AISentiment.vue'),
                 meta: { title: 'AI情感分析', icon: 'Sunny', roles: ['student'] }
+            },
+            // ===== 教学质量评估模块 =====
+            {
+                path: 'teaching/exams',
+                name: 'TeachingExams',
+                component: () => import('@/views/teaching/ExamList.vue'),
+                meta: { title: '考试管理', icon: 'Document', roles: ['admin', 'teacher'] }
+            },
+            {
+                path: 'teaching/scores',
+                name: 'TeachingScores',
+                component: () => import('@/views/teaching/ScoreList.vue'),
+                meta: { title: '成绩管理', icon: 'DataLine', roles: ['admin', 'teacher'] }
+            },
+            {
+                path: 'teaching/analysis/class',
+                name: 'TeachingClassAnalysis',
+                component: () => import('@/views/teaching/ClassAnalysis.vue'),
+                meta: { title: '班级学情分析', icon: 'DataAnalysis', roles: ['admin', 'teacher'] }
+            },
+            {
+                path: 'teaching/analysis/grade',
+                name: 'TeachingGradeAnalysis',
+                component: () => import('@/views/teaching/GradeAnalysis.vue'),
+                meta: { title: '年级学情分析', icon: 'TrendCharts', roles: ['admin'] }
+            },
+            {
+                path: 'teaching/analysis/student',
+                name: 'TeachingStudentAnalysis',
+                component: () => import('@/views/teaching/StudentAnalysis.vue'),
+                meta: { title: '学生学情分析', icon: 'User', roles: ['admin', 'teacher', 'student'] }
+            },
+            {
+                path: 'teaching/classes',
+                name: 'TeachingClasses',
+                component: () => import('@/views/teaching/ClassManage.vue'),
+                meta: { title: '班级管理', icon: 'School', roles: ['admin'] }
+            },
+            {
+                path: 'teaching/subjects',
+                name: 'TeachingSubjects',
+                component: () => import('@/views/teaching/SubjectManage.vue'),
+                meta: { title: '学科管理', icon: 'Reading', roles: ['admin'] }
+            },
+            // ===== 学生成长档案模块 =====
+            {
+                path: 'portfolio/overview',
+                name: 'PortfolioOverview',
+                component: () => import('@/views/portfolio/PortfolioOverview.vue'),
+                meta: { title: '成长档案', icon: 'TrendCharts', roles: ['admin', 'teacher', 'student'] }
+            },
+            {
+                path: 'portfolio/skills',
+                name: 'PortfolioSkills',
+                component: () => import('@/views/portfolio/SkillList.vue'),
+                meta: { title: '技能记录', icon: 'Star', roles: ['admin', 'teacher', 'student'] }
+            },
+            {
+                path: 'portfolio/honors',
+                name: 'PortfolioHonors',
+                component: () => import('@/views/portfolio/HonorList.vue'),
+                meta: { title: '荣誉记录', icon: 'Trophy', roles: ['admin', 'teacher', 'student'] }
+            },
+            {
+                path: 'portfolio/mental-health',
+                name: 'PortfolioMentalHealth',
+                component: () => import('@/views/portfolio/MentalHealth.vue'),
+                meta: { title: '心理健康', icon: 'Heart', roles: ['admin', 'teacher', 'student'] }
+            },
+            {
+                path: 'portfolio/comments',
+                name: 'PortfolioComments',
+                component: () => import('@/views/portfolio/CommentList.vue'),
+                meta: { title: '学生评语', icon: 'EditPen', roles: ['admin', 'teacher'] }
+            },
+            {
+                path: 'portfolio/class',
+                name: 'PortfolioClass',
+                component: () => import('@/views/portfolio/ClassPortfolio.vue'),
+                meta: { title: '班级成长档案', icon: 'Avatar', roles: ['admin', 'teacher'] }
             }
         ]
     },

@@ -1,0 +1,170 @@
+const express = require('express');
+const router = express.Router();
+const { verifyToken, checkRole } = require('../middleware/auth');
+const asyncHandler = require('../utils/asyncHandler');
+const { success, fail, paginate, ErrorCode } = require('../utils/response');
+const TeachingService = require('../services/teaching.service');
+
+// ==================== 考试管理（管理员、教师） ====================
+
+// 获取考试列表
+router.get('/exams', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { page, pageSize, examType, grade, status, keyword } = req.query;
+  const result = await TeachingService.getExamList({
+    page, pageSize, examType, grade, status, keyword
+  });
+  paginate(res, result.list, result.total, result.page, result.pageSize);
+}));
+
+// 获取考试详情
+router.get('/exams/:id', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const exam = await TeachingService.getExamDetail(req.params.id);
+  success(res, exam);
+}));
+
+// 创建考试
+router.post('/exams', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const result = await TeachingService.createExam({
+    ...req.body,
+    createdBy: req.user.id
+  });
+  success(res, result, '考试创建成功');
+}));
+
+// 更新考试
+router.put('/exams/:id', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  await TeachingService.updateExam(req.params.id, req.body);
+  success(res, null, '考试更新成功');
+}));
+
+// 删除考试
+router.delete('/exams/:id', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  await TeachingService.deleteExam(req.params.id);
+  success(res, null, '考试删除成功');
+}));
+
+// 添加考试科目
+router.post('/exams/:id/subjects', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const result = await TeachingService.addExamSubject(req.params.id, req.body);
+  success(res, result, '考试科目添加成功');
+}));
+
+// 移除考试科目
+router.delete('/exams/:id/subjects/:subjectId', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  await TeachingService.removeExamSubject(req.params.id, req.params.subjectId);
+  success(res, null, '考试科目移除成功');
+}));
+
+// ==================== 成绩管理 ====================
+
+// 获取成绩列表（按考试+班级+科目筛选）
+router.get('/scores', verifyToken, checkRole('admin', 'teacher', 'student'), asyncHandler(async (req, res) => {
+  const { examId, classId, subjectId, studentId } = req.query;
+
+  // 学生只能查看自己的成绩
+  if (req.user.role === 'student') {
+    if (studentId && String(studentId) !== String(req.user.id)) {
+      return fail(res, '无权查看他人成绩', ErrorCode.FORBIDDEN);
+    }
+    // 学生通过 studentId 查询自己的成绩
+    if (!examId && !studentId) {
+      return fail(res, '参数不完整', ErrorCode.PARAM_VALIDATION);
+    }
+  }
+
+  if (examId && classId) {
+    // 按考试+班级+科目查询
+    const scores = await TeachingService.getClassScores(examId, classId, subjectId || null);
+    success(res, scores);
+  } else if (examId && studentId) {
+    // 按考试+学生查询
+    const scores = await TeachingService.getStudentScores(examId, studentId);
+    success(res, scores);
+  } else {
+    fail(res, '参数不完整，请提供 examId 和 classId 或 examId 和 studentId', ErrorCode.PARAM_VALIDATION);
+  }
+}));
+
+// 批量导入成绩
+router.post('/scores/import', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { examId, scores } = req.body;
+  if (!examId || !scores) {
+    return fail(res, '参数不完整', ErrorCode.PARAM_VALIDATION);
+  }
+  const result = await TeachingService.importScores(examId, scores);
+  success(res, result, `成功导入 ${result.affectedRows} 条成绩`);
+}));
+
+// 更新成绩
+router.put('/scores/:id', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  await TeachingService.updateScore(req.params.id, req.body);
+  success(res, null, '成绩更新成功');
+}));
+
+// 删除成绩
+router.delete('/scores/:id', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  await TeachingService.deleteScore(req.params.id);
+  success(res, null, '成绩删除成功');
+}));
+
+// 学生历史成绩
+router.get('/scores/student/:studentId', verifyToken, checkRole('admin', 'teacher', 'student'), asyncHandler(async (req, res) => {
+  // 学生只能查看自己的成绩
+  if (req.user.role === 'student' && String(req.params.studentId) !== String(req.user.id)) {
+    return fail(res, '无权查看他人成绩', ErrorCode.FORBIDDEN);
+  }
+
+  const { page, pageSize } = req.query;
+  const result = await TeachingService.getStudentScoreHistory(req.params.studentId, { page, pageSize });
+  paginate(res, result.list, result.total, result.page, result.pageSize);
+}));
+
+// ==================== 教学质量分析 ====================
+
+// 班级学情分析
+router.get('/analysis/class/:examId/:classId', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const analysis = await TeachingService.getClassAnalysis(req.params.examId, req.params.classId);
+  success(res, analysis);
+}));
+
+// 年级学情分析
+router.get('/analysis/grade/:examId', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const analysis = await TeachingService.getGradeAnalysis(req.params.examId);
+  success(res, analysis);
+}));
+
+// 学生学情分析
+router.get('/analysis/student/:studentId', verifyToken, checkRole('admin', 'teacher', 'student'), asyncHandler(async (req, res) => {
+  // 学生只能查看自己的分析
+  if (req.user.role === 'student' && String(req.params.studentId) !== String(req.user.id)) {
+    return fail(res, '无权查看他人学情分析', ErrorCode.FORBIDDEN);
+  }
+
+  const { examId } = req.query;
+  const analysis = await TeachingService.getStudentAnalysis(req.params.studentId, examId || null);
+  success(res, analysis);
+}));
+
+// ==================== 班级与学科（管理员） ====================
+
+// 获取班级列表
+router.get('/classes', verifyToken, checkRole('admin'), asyncHandler(async (req, res) => {
+  const { page, pageSize, grade, department, keyword } = req.query;
+  const result = await TeachingService.getClassList({ page, pageSize, grade, department, keyword });
+  paginate(res, result.list, result.total, result.page, result.pageSize);
+}));
+
+// 获取学科列表
+router.get('/subjects', verifyToken, checkRole('admin'), asyncHandler(async (req, res) => {
+  const { page, pageSize, category, keyword } = req.query;
+  const result = await TeachingService.getSubjectList({ page, pageSize, category, keyword });
+  paginate(res, result.list, result.total, result.page, result.pageSize);
+}));
+
+// 获取班级学科教师
+router.get('/classes/:id/teachers', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const teachers = await TeachingService.getClassSubjectTeachers(req.params.id);
+  success(res, teachers);
+}));
+
+module.exports = router;

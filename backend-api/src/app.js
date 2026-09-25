@@ -14,6 +14,10 @@ const notificationRoutes = require('./routes/notification');
 const aiAgentRoutes = require('./routes/aiAgent');
 const aiScienceRoutes = require('./routes/aiScience');
 const aiHealthRoutes = require('./routes/aiHealth');
+// 新架构模块
+const teachingRoutes = require('./routes/teaching.routes');
+const portfolioRoutes = require('./routes/portfolio.routes');
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,6 +47,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/ai', aiAgentRoutes);
 app.use('/api/ai-science', aiScienceRoutes);
 app.use('/api/ai-health', aiHealthRoutes);
+// 新架构模块路由
+app.use('/api/teaching', teachingRoutes);
+app.use('/api/portfolio', portfolioRoutes);
 
 // WebSocket 实时通讯
 require('./websockets/socketHandler')(io);
@@ -52,15 +59,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 错误处理中间件
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
-    message: '服务器内部错误',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+// 404 处理
+app.use('/api', notFoundHandler);
+
+// 统一错误处理中间件
+app.use(errorHandler);
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
