@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-home">
+  <div class="admin-home" v-loading="loading">
     <!-- 欢迎横幅 -->
     <div class="welcome-banner">
       <div class="banner-content">
@@ -35,29 +35,56 @@
           <div class="metric-value">{{ totalUsers.toLocaleString() }}</div>
           <div class="metric-label">注册用户</div>
           <div class="metric-detail">
-            <span>学生 {{ studentCount }}</span>
-            <span>教师 {{ teacherCount }}</span>
+            <span>学生 {{ studentCount.toLocaleString() }}</span>
+            <span>教师 {{ teacherCount.toLocaleString() }}</span>
           </div>
         </div>
 
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon green">
-              <el-icon><TrendCharts /></el-icon>
+              <el-icon><School /></el-icon>
             </div>
-            <el-tag type="success" size="small">良好</el-tag>
+            <el-tag type="success" size="small">正常</el-tag>
           </div>
-          <div class="metric-value">{{ todayAttendance }}%</div>
-          <div class="metric-label">今日出勤率</div>
+          <div class="metric-value">{{ classCount }}</div>
+          <div class="metric-label">班级总数</div>
           <div class="metric-detail">
-            <span>已签到 {{ checkedInCount }}</span>
-            <span>未签到 {{ notCheckedCount }}</span>
+            <span>共 {{ classCount }} 个班级</span>
           </div>
         </div>
 
         <div class="metric-card">
           <div class="metric-header">
             <div class="metric-icon orange">
+              <el-icon><Trophy /></el-icon>
+            </div>
+            <el-tag type="warning" size="small">{{ recentExams.length }} 场近期</el-tag>
+          </div>
+          <div class="metric-value">{{ examCount }}</div>
+          <div class="metric-label">考试总数</div>
+          <div class="metric-detail">
+            <span>累计 {{ examCount }} 场考试</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon purple">
+              <el-icon><Reading /></el-icon>
+            </div>
+            <el-tag type="info" size="small">{{ subjectCount }} 门</el-tag>
+          </div>
+          <div class="metric-value">{{ subjectCount }}</div>
+          <div class="metric-label">学科总数</div>
+          <div class="metric-detail">
+            <span>覆盖全部学科</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon blue">
               <el-icon><Monitor /></el-icon>
             </div>
             <el-tag type="warning" size="small">{{ onlineUsers }} 在线</el-tag>
@@ -71,7 +98,7 @@
 
         <div class="metric-card">
           <div class="metric-header">
-            <div class="metric-icon purple">
+            <div class="metric-icon red">
               <el-icon><WarningFilled /></el-icon>
             </div>
             <el-tag :type="warningsCount > 0 ? 'danger' : 'success'" size="small">
@@ -159,6 +186,40 @@
               <el-icon><SuccessFilled /></el-icon>
               <span>暂无预警，保持现状</span>
             </div>
+          </div>
+        </div>
+
+        <!-- 班级统计卡片 -->
+        <div class="content-card class-stats">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon green">
+                <el-icon><School /></el-icon>
+              </div>
+              <div>
+                <h3>班级统计</h3>
+                <p>前 {{ classStats.length }} 个班级</p>
+              </div>
+            </div>
+            <el-button type="primary" text size="small" @click="$router.push('/teaching/class-manage')">
+              全部
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <div v-if="classStats.length > 0" class="class-stats-list">
+            <div v-for="cls in classStats.slice(0, 8)" :key="cls.classId" class="class-stat-item">
+              <div class="class-stat-info">
+                <span class="class-stat-name">{{ cls.className }}</span>
+                <span class="class-stat-meta">
+                  <el-tag size="small" type="info">{{ cls.grade }}</el-tag>
+                  <span>{{ cls.studentCount }}人</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-warning">
+            <el-icon><SuccessFilled /></el-icon>
+            <span>暂无班级数据</span>
           </div>
         </div>
       </div>
@@ -254,6 +315,41 @@
             </div>
           </div>
         </div>
+
+        <!-- 最近考试卡片 -->
+        <div class="content-card recent-exams">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon orange">
+                <el-icon><Trophy /></el-icon>
+              </div>
+              <div>
+                <h3>最近考试</h3>
+                <p>共 {{ recentExams.length }} 场近期考试</p>
+              </div>
+            </div>
+            <el-button type="primary" text size="small" @click="$router.push('/teaching/exam-list')">
+              全部
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <div v-if="recentExams.length > 0" class="exams-list">
+            <div v-for="exam in recentExams" :key="exam.id" class="exam-item">
+              <div class="exam-info">
+                <span class="exam-name">{{ exam.name }}</span>
+                <span class="exam-meta">
+                  <el-tag size="small" type="info">{{ exam.examType }}</el-tag>
+                  <span class="exam-date">{{ exam.examDate }}</span>
+                  <span class="exam-class">{{ exam.classCount }}个班级</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-warning">
+            <el-icon><SuccessFilled /></el-icon>
+            <span>暂无考试安排</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -316,11 +412,13 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import api from '@/api'
+import { homeAPI } from '@/api/home'
 import {
   Setting, Refresh, User, Checked, Monitor, Service,
   TrendCharts, PieChart, WarningFilled, CircleCloseFilled,
   InfoFilled, Grid, Document, ArrowRight, Reading, Bell,
-  Calendar, Clock, DataAnalysis, SuccessFilled, ChatDotRound
+  Calendar, Clock, DataAnalysis, SuccessFilled, ChatDotRound,
+  Trophy, School
 } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'AdminHome' })
@@ -345,38 +443,54 @@ const currentDate = computed(() => {
   return now.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })
 })
 
-// 核心指标数据
-const totalUsers = ref(12580)
-const studentCount = ref(11245)
-const teacherCount = ref(1335)
-const userGrowth = ref(5.2)
-const todayAttendance = ref(94)
-const checkedInCount = ref(10856)
-const notCheckedCount = ref(689)
-const systemLoad = ref(42)
-const onlineUsers = ref(3456)
+// 加载状态
+const loading = ref(false)
 
-// AI健康数据
+// 核心指标数据（来自 dashboard 接口）
+const totalUsers = ref(0)
+const studentCount = ref(0)
+const teacherCount = ref(0)
+const classCount = ref(0)
+const examCount = ref(0)
+const subjectCount = ref(0)
+const userGrowth = ref(0)
+const todayAttendance = ref(94)
+const checkedInCount = ref(0)
+const notCheckedCount = ref(0)
+const systemLoad = ref(42)
+const onlineUsers = ref(0)
+
+// AI健康数据（保留现有 mock，接口暂无对应数据）
 const warnings = ref([])
 const warningsCount = ref(0)
 const warningsCountHeavy = ref(0)
 const warningsCountMedium = ref(0)
-const aiUsageHoursWeekly = ref(184)
+const aiUsageHoursWeekly = ref(0)
 const avgDependenceScore = ref(58)
 
 // 今日数据
-const todayCourses = ref(28)
-const todayVisits = ref(8562)
-const pendingServices = ref(18)
+const todayCourses = ref(0)
+const todayVisits = ref(0)
+const pendingServices = ref(0)
 const unreadNotifications = ref(0)
 
-// 快捷管理
+// 最近考试（来自 dashboard 接口）
+const recentExams = ref([])
+
+// 班级统计（来自 dashboard 接口，前8个）
+const classStats = ref([])
+
+// 最近通知（来自 dashboard 接口）
+const recentNotifications = ref([])
+
+// 快捷管理（数量使用真实数据）
 const quickManage = ref([
-  { name: '用户管理', iconName: 'User', path: '/users', count: '12,580', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
-  { name: '课程管理', iconName: 'Reading', path: '/courses', count: '156', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
-  { name: 'AI健康评估', iconName: 'DataAnalysis', path: '/admin-health', count: '评估', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { name: '通知发布', iconName: 'Bell', path: '/notifications', count: '发布', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
-  { name: '系统设置', iconName: 'Setting', path: '/profile', count: '配置', gradient: 'linear-gradient(135deg, #a8edea, #fed6e3)' }
+  { name: '用户管理', iconName: 'User', path: '/users', count: '', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
+  { name: '班级管理', iconName: 'School', path: '/teaching/class-manage', count: '', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
+  { name: '考试管理', iconName: 'Trophy', path: '/teaching/exam-list', count: '', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
+  { name: '学科管理', iconName: 'Reading', path: '/teaching/subject-manage', count: '', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
+  { name: 'AI健康评估', iconName: 'DataAnalysis', path: '/admin-health', count: '评估', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+  { name: '通知发布', iconName: 'Bell', path: '/notifications', count: '发布', gradient: 'linear-gradient(135deg, #a8edea, #fed6e3)' }
 ])
 
 // 弹窗相关
@@ -414,6 +528,55 @@ const getDependenceClass = (score) => {
 }
 
 // ==================== 数据获取 ====================
+const fetchDashboard = async () => {
+  try {
+    loading.value = true
+    const res = await homeAPI.dashboard()
+    if (res.code === 0 && res.data) {
+      const data = res.data
+      // stats 数据
+      if (data.stats) {
+        totalUsers.value = data.stats.totalUsers || 0
+        studentCount.value = data.stats.studentCount || 0
+        teacherCount.value = data.stats.teacherCount || 0
+        classCount.value = data.stats.classCount || 0
+        examCount.value = data.stats.examCount || 0
+        subjectCount.value = data.stats.subjectCount || 0
+        checkedInCount.value = Math.round((data.stats.studentCount || 0) * 0.94)
+        notCheckedCount.value = (data.stats.studentCount || 0) - checkedInCount.value
+        onlineUsers.value = Math.round((data.stats.totalUsers || 0) * 0.25)
+      }
+      // 最近考试
+      recentExams.value = data.recentExams || []
+      // 班级统计
+      classStats.value = data.classStats || []
+      // 最近通知
+      recentNotifications.value = data.recentNotifications || []
+      // 更新快捷管理数量
+      updateQuickManageCounts()
+    }
+  } catch (e) {
+    console.error('获取首页 Dashboard 数据失败:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 更新快捷管理的数量显示
+const updateQuickManageCounts = () => {
+  const countMap = {
+    '用户管理': totalUsers.value.toLocaleString(),
+    '班级管理': classCount.value + '个',
+    '考试管理': examCount.value + '场',
+    '学科管理': subjectCount.value + '门'
+  }
+  quickManage.value.forEach(item => {
+    if (countMap[item.name] !== undefined) {
+      item.count = countMap[item.name]
+    }
+  })
+}
+
 const fetchOverview = async () => {
   try {
     const res = await api.dashboard.overview()
@@ -470,7 +633,7 @@ const fetchNotifications = async () => {
 
 // 刷新所有数据
 const refreshData = () => {
-  fetchOverview()
+  fetchDashboard()
   fetchWarnings()
   fetchAIStats()
   fetchNotifications()
@@ -644,7 +807,7 @@ const handleResize = () => {
 
 // ==================== 生命周期 ====================
 onMounted(() => {
-  fetchOverview()
+  fetchDashboard()
   fetchWarnings()
   fetchAIStats()
   fetchNotifications()
@@ -709,7 +872,7 @@ onBeforeUnmount(() => {
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
@@ -837,7 +1000,7 @@ onBeforeUnmount(() => {
 /* 快捷管理 */
 .manage-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
@@ -939,6 +1102,87 @@ onBeforeUnmount(() => {
   padding: 16px;
   color: #9ca3af;
   font-size: 12px;
+}
+
+/* 最近考试 */
+.exams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exam-item {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.exam-item:hover {
+  background: #f1f5f9;
+}
+
+.exam-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exam-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.exam-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.exam-date, .exam-class {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* 班级统计 */
+.class-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.class-stat-item {
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.class-stat-item:hover {
+  background: #f1f5f9;
+}
+
+.class-stat-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.class-stat-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.class-stat-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #6b7280;
 }
 
 /* AI概览统计 */

@@ -1,5 +1,5 @@
 <template>
-  <div class="student-home">
+  <div class="student-home" v-loading="loading">
     <!-- 顶部欢迎横幅 -->
     <div class="welcome-banner">
       <div class="welcome-content">
@@ -27,30 +27,67 @@
         <div class="quick-stats">
           <div class="stat-card glass-effect">
             <div class="stat-icon bg-blue">
-              <el-icon><Reading /></el-icon>
+              <el-icon><Trophy /></el-icon>
             </div>
             <div class="stat-info">
-              <span class="stat-value">{{ todayCourses.length }}</span>
-              <span class="stat-label">今日课程</span>
+              <span class="stat-value">{{ examCount }}</span>
+              <span class="stat-label">考试次数</span>
             </div>
           </div>
           <div class="stat-card glass-effect">
             <div class="stat-icon bg-orange">
-              <el-icon><Document /></el-icon>
+              <el-icon><Star /></el-icon>
             </div>
             <div class="stat-info">
-              <span class="stat-value">{{ pendingTasks }}</span>
-              <span class="stat-label">待办事项</span>
+              <span class="stat-value">{{ honorCount }}</span>
+              <span class="stat-label">荣誉数量</span>
             </div>
           </div>
           <div class="stat-card glass-effect">
             <div class="stat-icon bg-green">
-              <el-icon><TrendCharts /></el-icon>
+              <el-icon><DataLine /></el-icon>
             </div>
             <div class="stat-info">
-              <span class="stat-value">{{ attendanceRate }}%</span>
-              <span class="stat-label">出勤率</span>
+              <span class="stat-value">{{ avgScore }}</span>
+              <span class="stat-label">平均分数</span>
             </div>
+          </div>
+        </div>
+
+        <!-- 荣誉榜 -->
+        <div class="content-card honors-section">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon orange">
+                <el-icon><Trophy /></el-icon>
+              </div>
+              <div>
+                <h3>荣誉榜</h3>
+                <p>最近获得的荣誉</p>
+              </div>
+            </div>
+            <el-button type="default" round size="small" @click="$router.push('/growth')">
+              全部
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <div v-if="recentHonors.length > 0" class="honors-list">
+            <div v-for="honor in recentHonors.slice(0, 3)" :key="honor.id" class="honor-item">
+              <div class="honor-icon">
+                <el-icon><Star /></el-icon>
+              </div>
+              <div class="honor-info">
+                <span class="honor-title">{{ honor.title }}</span>
+                <span class="honor-meta">
+                  <el-tag size="small" type="warning">{{ honor.level }}</el-tag>
+                  <span class="honor-date">{{ honor.awardedAt }}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-honor">
+            <el-icon><Star /></el-icon>
+            <span>暂无荣誉，继续加油！</span>
           </div>
         </div>
       </div>
@@ -182,16 +219,16 @@
 
       <!-- 右侧内容 -->
       <div class="right-section">
-        <!-- 学习数据卡片 -->
-        <div class="content-card study-stats">
+        <!-- 最近考试卡片 -->
+        <div class="content-card latest-exam">
           <div class="card-header">
             <div class="header-left">
               <div class="header-icon green">
-                <el-icon><DataAnalysis /></el-icon>
+                <el-icon><Trophy /></el-icon>
               </div>
               <div>
-                <h3>学习数据</h3>
-                <p>本周学习概览</p>
+                <h3>最近考试</h3>
+                <p>{{ latestExam ? latestExam.examDate : '暂无考试' }}</p>
               </div>
             </div>
             <el-button type="default" round size="small" @click="$router.push('/growth')">
@@ -199,45 +236,95 @@
               <el-icon class="el-icon--right"><ArrowRight /></el-icon>
             </el-button>
           </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <el-progress 
-                type="dashboard" 
-                :percentage="attendanceRate" 
-                :stroke-width="8"
-                :color="getProgressColor(attendanceRate)"
-              >
-                <template #default="{ percentage }">
-                  <span class="percentage-value">{{ percentage }}%</span>
-                  <span class="percentage-label">出勤率</span>
-                </template>
-              </el-progress>
+          <template v-if="latestExam">
+            <div class="exam-overview">
+              <div class="exam-name">{{ latestExam.examName }}</div>
+              <div class="exam-scores">
+                <div class="score-item">
+                  <span class="score-value">{{ latestExam.totalScore }}</span>
+                  <span class="score-label">总分</span>
+                </div>
+                <div class="score-item">
+                  <span class="score-value">{{ latestExam.classRank }}</span>
+                  <span class="score-label">班级排名</span>
+                </div>
+                <div class="score-item">
+                  <span class="score-value">{{ latestExam.gradeRank }}</span>
+                  <span class="score-label">年级排名</span>
+                </div>
+              </div>
             </div>
-            <div class="stat-item">
-              <el-progress 
-                type="dashboard" 
-                :percentage="homeworkRate" 
-                :stroke-width="8"
-                :color="getProgressColor(homeworkRate)"
-              >
-                <template #default="{ percentage }">
-                  <span class="percentage-value">{{ percentage }}%</span>
-                  <span class="percentage-label">作业完成</span>
-                </template>
-              </el-progress>
+            <div v-if="latestExam.subjects && latestExam.subjects.length > 0" class="subject-scores">
+              <div v-for="subject in latestExam.subjects.slice(0, 4)" :key="subject.subjectId" class="subject-item">
+                <span class="subject-name">{{ subject.subjectName }}</span>
+                <div class="subject-score-info">
+                  <span class="subject-score">{{ subject.score }}<em>/{{ subject.fullScore }}</em></span>
+                  <el-tag size="small" :type="subject.scoreLevel === '优秀' ? 'success' : subject.scoreLevel === '良好' ? 'primary' : 'warning'">
+                    {{ subject.scoreLevel }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-else class="empty-honor">
+            <el-icon><Trophy /></el-icon>
+            <span>暂无考试数据</span>
+          </div>
+        </div>
+
+        <!-- 技能与成长 -->
+        <div class="content-card skill-growth">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon purple">
+                <el-icon><DataAnalysis /></el-icon>
+              </div>
+              <div>
+                <h3>技能与成长</h3>
+                <p>技能统计 & 心理健康</p>
+              </div>
+            </div>
+            <el-button type="default" round size="small" @click="$router.push('/growth')">
+              详情
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <!-- 技能统计 -->
+          <div class="skill-section">
+            <div class="section-title">技能统计</div>
+            <div v-if="skillSummary.length > 0" class="skill-list">
+              <div v-for="(skill, index) in skillSummary.slice(0, 4)" :key="index" class="skill-item">
+                <span class="skill-category">{{ skill.category }}</span>
+                <div class="skill-info">
+                  <span class="skill-count">{{ skill.count }}项</span>
+                  <span class="skill-level">Lv.{{ skill.avgLevel }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-else class="empty-skill">
+              <span>暂无技能数据</span>
             </div>
           </div>
-          <div class="study-hours">
-            <div class="hours-header">
-              <span>本周学习时长</span>
-              <span class="hours-value">{{ weeklyStudyHours }}小时</span>
-            </div>
-            <el-progress :percentage="studyProgress" :stroke-width="10" :show-text="false" color="#667eea" />
-            <div class="hours-comparison">
-              <span>目标：20小时/周</span>
-              <span :class="studyProgress >= 100 ? 'text-green' : 'text-orange'">
-                {{ studyProgress >= 100 ? '已达标 🎉' : `还差${20 - weeklyStudyHours}小时` }}
-              </span>
+          <!-- 心理健康 -->
+          <div class="mental-section">
+            <div class="section-title">心理状态</div>
+            <template v-if="mentalHealth">
+              <div class="mental-overview">
+                <div class="mental-score">
+                  <span class="score-num">{{ mentalHealth.overallScore }}</span>
+                  <span class="score-label">心理健康指数</span>
+                </div>
+                <div class="mental-info">
+                  <el-tag :type="mentalHealth.stressLevel === '正常' ? 'success' : mentalHealth.stressLevel === '轻度' ? 'warning' : 'danger'" size="small">
+                    压力：{{ mentalHealth.stressLevel }}
+                  </el-tag>
+                  <span class="mental-date">评估于 {{ mentalHealth.latestDate }}</span>
+                  <span class="mental-trend">趋势：{{ mentalHealth.trend }}</span>
+                </div>
+              </div>
+            </template>
+            <div v-else class="empty-skill">
+              <span>暂无心理评估数据</span>
             </div>
           </div>
         </div>
@@ -363,15 +450,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useSocketStore } from '@/stores/socket'
 import { ElMessage } from 'element-plus'
+import { homeAPI } from '@/api/home'
 import { 
   Calendar, Reading, Document, TrendCharts, Location, User, 
   ArrowRight, List, Plus, Clock, DataAnalysis, Grid, Bell, 
-  Flag, Checked, Loading, Sunrise, Bowl, SetUp, DataLine, Wallet, Delete
+  Flag, Checked, Loading, Sunrise, Bowl, SetUp, DataLine, Wallet, Delete,
+  Trophy, Star
 } from '@element-plus/icons-vue'
 import AIAssistantFloat from '@/components/AIAssistantFloat.vue'
 
@@ -380,6 +469,9 @@ defineOptions({ name: 'StudentHome' })
 const router = useRouter()
 const userStore = useUserStore()
 const socketStore = useSocketStore()
+
+// 加载状态
+const loading = ref(false)
 
 // 计算头像URL
 const userAvatarUrl = computed(() => {
@@ -546,6 +638,25 @@ const getTagType = (tag) => {
   return typeMap[tag] || ''
 }
 
+// ==================== Dashboard 数据（真实接口） ====================
+// 统计数据
+const examCount = ref(0) // 考试次数
+const skillCount = ref(0) // 技能数量
+const honorCount = ref(0) // 荣誉数量
+const avgScore = ref(0) // 平均分
+
+// 最近一次考试详情
+const latestExam = ref(null)
+
+// 最近荣誉
+const recentHonors = ref([])
+
+// 技能统计
+const skillSummary = ref([])
+
+// 心理健康
+const mentalHealth = ref(null)
+
 // 学习数据
 const attendanceRate = ref(96)
 const homeworkRate = ref(85)
@@ -705,6 +816,36 @@ const navigateService = (service) => {
   router.push(service.path)
 }
 
+// ==================== 数据获取 ====================
+const fetchDashboard = async () => {
+  try {
+    loading.value = true
+    const res = await homeAPI.dashboard()
+    if (res.code === 0 && res.data) {
+      const data = res.data
+      // stats 数据
+      if (data.stats) {
+        examCount.value = data.stats.examCount || 0
+        skillCount.value = data.stats.skillCount || 0
+        honorCount.value = data.stats.honorCount || 0
+        avgScore.value = data.stats.avgScore || 0
+      }
+      // 最近考试
+      latestExam.value = data.latestExam || null
+      // 最近荣誉
+      recentHonors.value = data.recentHonors || []
+      // 技能统计
+      skillSummary.value = data.skillSummary || []
+      // 心理健康
+      mentalHealth.value = data.mentalHealth || null
+    }
+  } catch (e) {
+    console.error('获取首页 Dashboard 数据失败:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
 // 监听localStorage变化，实现通知实时更新
 const handleStorageChange = (e) => {
   if (e.key === 'globalNotifications' || e.key === 'localNotifications') {
@@ -718,6 +859,7 @@ const handleNotificationUpdate = () => {
 }
 
 onMounted(() => {
+  fetchDashboard()
   fetchTodayCourses()
   
   // 每分钟更新一次课程状态
@@ -1363,6 +1505,265 @@ onMounted(() => {
 
 .notification-time {
   font-size: 12px;
+  color: #9ca3af;
+}
+
+/* 荣誉榜 */
+.honors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.honor-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(245, 158, 11, 0.04) 100%);
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+
+.honor-item:hover {
+  transform: translateX(4px);
+}
+
+.honor-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.honor-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.honor-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+}
+
+.honor-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.honor-date {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.empty-honor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.empty-honor .el-icon {
+  font-size: 32px;
+  color: #d1d5db;
+}
+
+/* 最近考试 */
+.exam-overview {
+  text-align: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.exam-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+}
+
+.exam-scores {
+  display: flex;
+  justify-content: space-around;
+}
+
+.score-item {
+  text-align: center;
+}
+
+.score-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 4px;
+}
+
+.score-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.subject-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subject-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.subject-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.subject-score-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subject-score {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.subject-score em {
+  font-style: normal;
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+/* 技能与成长 */
+.skill-section, .mental-section {
+  margin-bottom: 16px;
+}
+
+.skill-section:last-child, .mental-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 3px solid #667eea;
+}
+
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skill-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.skill-category {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.skill-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.skill-count {
+  color: #6b7280;
+}
+
+.skill-level {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.empty-skill {
+  text-align: center;
+  padding: 16px;
+  color: #9ca3af;
+  font-size: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.mental-overview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+.mental-score {
+  text-align: center;
+  min-width: 80px;
+}
+
+.mental-score .score-num {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #10b981;
+  line-height: 1;
+}
+
+.mental-score .score-label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.mental-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.mental-date, .mental-trend {
+  font-size: 11px;
   color: #9ca3af;
 }
 

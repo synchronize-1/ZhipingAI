@@ -1,9 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const { verifyToken, checkRole } = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
 const { success, fail, paginate, ErrorCode } = require('../utils/response');
 const TeachingService = require('../services/teaching.service');
+
+// multer 内存存储配置（Excel 文件上传，不落盘）
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB 限制
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+    ];
+    if (allowedTypes.includes(file.mimetype) || file.originalname.match(/\.(xlsx|xls)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('只支持 Excel 文件（.xlsx, .xls）'));
+    }
+  }
+});
 
 // ==================== 考试管理（管理员、教师） ====================
 
@@ -85,14 +107,83 @@ router.get('/scores', verifyToken, checkRole('admin', 'teacher', 'student'), asy
   }
 }));
 
-// 批量导入成绩
+// 批量导入成绩（支持原有扁平格式和 Excel 导入后的 rows 格式）
 router.post('/scores/import', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
-  const { examId, scores } = req.body;
-  if (!examId || !scores) {
-    return fail(res, '参数不完整', ErrorCode.PARAM_VALIDATION);
+  const { examId, scores, classId, rows } = req.body;
+  if (!examId) {
+    return fail(res, '参数不完整：缺少 examId', ErrorCode.PARAM_VALIDATION);
   }
-  const result = await TeachingService.importScores(examId, scores);
-  success(res, result, `成功导入 ${result.affectedRows} 条成绩`);
+
+  let result;
+  // 新格式：rows 数组（Excel 导入后的数据格式）
+  if (rows && Array.isArray(rows)) {
+    if (!classId) {
+      return fail(res, '参数不完整：缺少 classId', ErrorCode.PARAM_VALIDATION);
+    }
+    result = await TeachingService.importScores(examId, { rows }, classId);
+    success(res, result, `成功导入 ${result.studentCount} 名学生、共 ${result.affectedRows} 条成绩记录`);
+  } else {
+    // 原有格式：scores 扁平数组
+    if (!scores) {
+      return fail(res, '参数不完整：缺少 scores 或 rows', ErrorCode.PARAM_VALIDATION);
+    }
+    result = await TeachingService.importScores(examId, scores);
+    success(res, result, `成功导入 ${result.affectedRows} 条成绩`);
+  }
+}));
+
+// Excel 成绩预览（上传 Excel 文件，解析并校验数据）
+router.post('/scores/preview', verifyToken, checkRole('admin', 'teacher'), upload.single('file'), asyncHandler(async (req, res) => {
+  const { examId, classId } = req.body;
+
+  if (!examId || !classId) {
+    return fail(res, '参数不完整：请提供 examId 和 classId', ErrorCode.PARAM_VALIDATION);
+  }
+
+  if (!req.file) {
+    return fail(res, '请上传 Excel 文件', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const result = await TeachingService.previewScores(examId, classId, req.file.buffer);
+  success(res, result, '预览完成');
+}));
+
+// 成绩导出 Excel
+router.get('/scores/export', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { examId, classId, subjectId } = req.query;
+
+  if (!examId || !classId) {
+    return fail(res, '参数不完整：请提供 examId 和 classId', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const { buffer, fileName } = await TeachingService.exportScores(examId, classId, subjectId || null);
+
+  // 设置响应头，触发浏览器下载
+  const encodedFileName = encodeURIComponent(fileName);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`);
+  res.setHeader('Content-Length', buffer.length);
+
+  res.send(buffer);
+}));
+
+// 下载成绩导入模板
+router.get('/scores/template', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { examId, classId } = req.query;
+
+  if (!examId || !classId) {
+    return fail(res, '参数不完整：请提供 examId 和 classId', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const { buffer, fileName } = await TeachingService.generateImportTemplate(examId, classId);
+
+  // 设置响应头，触发浏览器下载
+  const encodedFileName = encodeURIComponent(fileName);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`);
+  res.setHeader('Content-Length', buffer.length);
+
+  res.send(buffer);
 }));
 
 // 更新成绩

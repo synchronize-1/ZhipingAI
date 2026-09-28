@@ -17,7 +17,37 @@ export const scoreAPI = {
   import: (examId, data) => request.post('/teaching/scores/import', { examId, ...data }),
   update: (id, data) => request.put(`/teaching/scores/${id}`, data),
   delete: (id) => request.delete(`/teaching/scores/${id}`),
-  studentHistory: (studentId, params) => request.get(`/teaching/scores/student/${studentId}`, { params })
+  studentHistory: (studentId, params) => request.get(`/teaching/scores/student/${studentId}`, { params }),
+  // Excel 预览
+  preview: (file, examId, classId) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('examId', examId)
+    formData.append('classId', classId)
+    return request.post('/teaching/scores/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+  // 导出成绩 Excel
+  exportExcel: (examId, classId, subjectId) => {
+    const params = { examId, classId }
+    if (subjectId) params.subjectId = subjectId
+    return request.get('/teaching/scores/export', {
+      params,
+      responseType: 'blob'
+    })
+  },
+  // 下载导入模板
+  downloadTemplate: (examId, classId) => {
+    return request.get('/teaching/scores/template', {
+      params: { examId, classId },
+      responseType: 'blob'
+    })
+  },
+  // 批量导入（rows 格式）
+  importFromRows: (examId, classId, rows) => {
+    return request.post('/teaching/scores/import', { examId, classId, rows })
+  }
 }
 
 // 教学质量分析

@@ -20,6 +20,12 @@ class Class {
     return rows[0];
   }
 
+  // 根据名称查询
+  static async findByName(name) {
+    const [rows] = await pool.execute('SELECT * FROM classes WHERE name = ?', [name]);
+    return rows[0];
+  }
+
   // 分页查询
   static async getAll({ page = 1, pageSize = 10, grade, department, keyword }) {
     const pageNum = parseInt(page) || 1;

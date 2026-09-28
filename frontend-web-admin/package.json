@@ -16,6 +16,7 @@
     "dayjs": "^1.11.10",
     "echarts": "^5.4.3",
     "element-plus": "^2.4.4",
+    "file-saver": "^2.0.5",
     "highlight.js": "^11.11.1",
     "jspdf": "^4.0.0",
     "katex": "^0.16.45",
@@ -23,7 +24,8 @@
     "pinia": "^2.1.7",
     "socket.io-client": "^4.7.2",
     "vue": "^3.4.0",
-    "vue-router": "^4.2.5"
+    "vue-router": "^4.2.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.2",

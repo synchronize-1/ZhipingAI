@@ -1,5 +1,5 @@
 <template>
-  <div class="teacher-home">
+  <div class="teacher-home" v-loading="loading">
     <!-- 顶部欢迎横幅 -->
     <div class="welcome-banner">
       <div class="welcome-content">
@@ -27,11 +27,11 @@
         <div class="quick-stats">
           <div class="stat-card glass-effect">
             <div class="stat-icon bg-blue">
-              <el-icon><Reading /></el-icon>
+              <el-icon><School /></el-icon>
             </div>
             <div class="stat-info">
-              <span class="stat-value">{{ todayClasses }}</span>
-              <span class="stat-label">今日授课</span>
+              <span class="stat-value">{{ classCount }}</span>
+              <span class="stat-label">任教班级</span>
             </div>
           </div>
           <div class="stat-card glass-effect">
@@ -54,11 +54,11 @@
           </div>
           <div class="stat-card glass-effect">
             <div class="stat-icon bg-purple">
-              <el-icon><ChatDotRound /></el-icon>
+              <el-icon><Star /></el-icon>
             </div>
             <div class="stat-info">
-              <span class="stat-value">{{ pendingQuestions }}</span>
-              <span class="stat-label">待答问题</span>
+              <span class="stat-value">{{ examCount }}</span>
+              <span class="stat-label">考试总数</span>
             </div>
           </div>
         </div>
@@ -207,6 +207,41 @@
           </div>
           <div class="chart-container" ref="attendanceChartRef"></div>
         </div>
+
+        <!-- 我的班级 -->
+        <div class="content-card my-classes">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon blue">
+                <el-icon><School /></el-icon>
+              </div>
+              <div>
+                <h3>我的班级</h3>
+                <p>共 {{ myClasses.length }} 个班级</p>
+              </div>
+            </div>
+            <el-button type="primary" text @click="$router.push('/teaching/class-manage')">
+              全部
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <div v-if="myClasses.length > 0" class="classes-grid">
+            <div v-for="cls in myClasses" :key="cls.classId" class="class-card-item">
+              <div class="class-card-header">
+                <span class="class-name">{{ cls.className }}</span>
+                <el-tag size="small" type="info">{{ cls.grade }}</el-tag>
+              </div>
+              <div class="class-card-body">
+                <span class="class-student-count">{{ cls.studentCount }} 名学生</span>
+                <span class="class-head-teacher">班主任：{{ cls.headTeacherName || '—' }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-todo">
+            <el-icon><SuccessFilled /></el-icon>
+            <span>暂无班级数据</span>
+          </div>
+        </div>
       </div>
 
       <!-- 右侧内容 -->
@@ -243,6 +278,10 @@
                 处理
               </el-button>
             </div>
+            <div v-if="todoList.length === 0" class="empty-todo">
+              <el-icon><SuccessFilled /></el-icon>
+              <span>暂无待办事项</span>
+            </div>
           </div>
         </div>
 
@@ -275,6 +314,40 @@
                 <span class="question-time">{{ question.time }}</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 最近考试 -->
+        <div class="content-card recent-exams">
+          <div class="card-header">
+            <div class="header-left">
+              <div class="header-icon orange">
+                <el-icon><Star /></el-icon>
+              </div>
+              <div>
+                <h3>最近考试</h3>
+                <p>共 {{ recentExams.length }} 场</p>
+              </div>
+            </div>
+            <el-button type="primary" text @click="$router.push('/teaching/exam-list')">
+              全部
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
+          </div>
+          <div v-if="recentExams.length > 0" class="exams-list">
+            <div v-for="exam in recentExams" :key="exam.id" class="exam-item">
+              <div class="exam-info">
+                <span class="exam-name">{{ exam.name }}</span>
+                <div class="exam-meta">
+                  <span class="exam-date">{{ exam.examDate }}</span>
+                  <span class="exam-class">{{ exam.classCount }}个班级</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-todo">
+            <el-icon><SuccessFilled /></el-icon>
+            <span>暂无考试安排</span>
           </div>
         </div>
 
@@ -430,16 +503,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useSocketStore } from '@/stores/socket'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
+import { homeAPI } from '@/api/home'
 import { 
   Calendar, Reading, Document, User, Location, ArrowRight, 
   List, Clock, TrendCharts, Grid, Checked, View, Star, 
-  ChatDotRound, Top, Bottom
+  ChatDotRound, Top, Bottom, School
 } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'TeacherHome' })
@@ -447,6 +521,9 @@ defineOptions({ name: 'TeacherHome' })
 const router = useRouter()
 const userStore = useUserStore()
 const socketStore = useSocketStore()
+
+// 加载状态
+const loading = ref(false)
 
 const userAvatarUrl = computed(() => {
   const avatar = userStore.user?.avatar
@@ -476,14 +553,24 @@ const currentWeekday = computed(() => {
   return days[new Date().getDay()]
 })
 
-// 统计数据
-const todayClasses = ref(3)
-const totalStudents = ref(156)
-const pendingHomework = ref(28)
-const pendingQuestions = ref(5)
-const totalStudentsToday = ref(89)
+// 统计数据（来自 dashboard 接口）
+const classCount = ref(0) // 任教班级数
+const totalStudents = ref(0) // 学生总数
+const pendingHomework = ref(0) // 待批作业
+const examCount = ref(0) // 考试总数
+const todayClasses = ref(3) // 今日授课（mock，接口暂无对应数据）
+const totalStudentsToday = ref(0)
 
-// 今日课程列表
+// 我的班级（来自 dashboard 接口）
+const myClasses = ref([])
+
+// 最近考试（来自 dashboard 接口）
+const recentExams = ref([])
+
+// 最近成绩（来自 dashboard 接口）
+const recentScores = ref([])
+
+// 今日课程列表（保留 mock 数据，接口暂无对应数据）
 const todayClassList = ref([
   { id: 1, name: '数据结构与算法', startTime: '08:00', endTime: '09:40', location: '教A-301', studentCount: 45, attendanceRate: 96, isCurrent: false, isFinished: true },
   { id: 2, name: '算法设计与分析', startTime: '10:00', endTime: '11:40', location: '教B-205', studentCount: 42, attendanceRate: 91, isCurrent: true, isFinished: false },
@@ -497,16 +584,9 @@ const avgAttendance = ref(94)
 const courseRating = ref('4.8')
 const interactionCount = ref(156)
 
-// 待办事项
-const pendingTodos = ref(6)
-const todoList = ref([
-  { id: 1, title: '批改数据结构作业（28份）', deadline: '今天 18:00', priority: 'high' },
-  { id: 2, title: '回复学生提问（5条）', deadline: '今天 20:00', priority: 'high' },
-  { id: 3, title: '准备明日课件', deadline: '明天 08:00', priority: 'medium' },
-  { id: 4, title: '录入期中成绩', deadline: '本周五', priority: 'medium' },
-  { id: 5, title: '参加教研会议', deadline: '周三 14:00', priority: 'low' },
-  { id: 6, title: '更新课程大纲', deadline: '下周一', priority: 'low' }
-])
+// 待办事项（来自 dashboard 接口）
+const pendingTodos = ref(0)
+const todoList = ref([])
 
 // 学生提问
 const studentQuestions = ref([
@@ -704,6 +784,56 @@ const submitHomework = () => {
   showHomeworkDialog.value = false
 }
 
+// ==================== 数据获取 ====================
+const fetchDashboard = async () => {
+  try {
+    loading.value = true
+    const res = await homeAPI.dashboard()
+    if (res.code === 0 && res.data) {
+      const data = res.data
+      // stats 数据
+      if (data.stats) {
+        classCount.value = data.stats.classCount || 0
+        totalStudents.value = data.stats.studentCount || 0
+        pendingHomework.value = data.stats.pendingComments || 0
+        examCount.value = data.stats.examCount || 0
+        totalStudentsToday.value = data.stats.studentCount || 0
+      }
+      // 我的班级
+      myClasses.value = data.myClasses || []
+      // 最近考试
+      recentExams.value = data.recentExams || []
+      // 最近成绩
+      recentScores.value = data.recentScores || []
+      // 待办事项
+      if (data.toDoList && data.toDoList.length > 0) {
+        todoList.value = data.toDoList.map(item => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          priority: item.priority || 'medium',
+          deadline: getPriorityDeadline(item.priority)
+        }))
+        pendingTodos.value = todoList.value.length
+      }
+    }
+  } catch (e) {
+    console.error('获取首页 Dashboard 数据失败:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 根据优先级生成显示的截止时间（接口暂无 deadline 字段）
+const getPriorityDeadline = (priority) => {
+  const deadlineMap = {
+    high: '今天',
+    medium: '本周',
+    low: '近期'
+  }
+  return deadlineMap[priority] || '近期'
+}
+
 const initChart = () => {
   if (!attendanceChartRef.value) return
   
@@ -747,6 +877,7 @@ const initChart = () => {
 }
 
 onMounted(() => {
+  fetchDashboard()
   setTimeout(initChart, 100)
 })
 </script>
@@ -1270,6 +1401,100 @@ onMounted(() => {
 
 .action-name {
   font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+/* 空状态 */
+.empty-todo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* 最近考试 */
+.exams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exam-item {
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.exam-item:hover {
+  background: #f3f4f6;
+}
+
+.exam-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exam-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.exam-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* 我的班级 */
+.classes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.class-card-item {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 14px;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.class-card-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.class-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.class-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.class-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.class-student-count {
   font-weight: 500;
   color: #4b5563;
 }

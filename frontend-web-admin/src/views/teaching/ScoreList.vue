@@ -2,7 +2,7 @@
   <div class="score-list">
     <PageHeader title="成绩管理" description="管理学生考试成绩信息" :breadcrumbs="breadcrumbs">
       <template #extra>
-        <el-button :icon="Download" @click="handleExport">导出成绩</el-button>
+        <el-button :icon="Download" :loading="exportLoading" :disabled="!filterForm.examId" @click="handleExport">导出成绩</el-button>
         <el-button type="primary" :icon="Upload" @click="handleImport">导入成绩</el-button>
       </template>
     </PageHeader>
@@ -152,6 +152,7 @@ const classList = ref([])
 const subjectList = ref([])
 const importVisible = ref(false)
 const importRef = ref(null)
+const exportLoading = ref(false)
 
 const defaultParams = {
   examId: '',
@@ -311,12 +312,42 @@ const handleImportSuccess = () => {
   refresh()
 }
 
-const handleExport = () => {
+const handleExport = async () => {
   if (!filterForm.examId) {
     ElMessage.warning('请先选择考试')
     return
   }
-  ElMessage.info('导出功能开发中...')
+  if (!filterForm.classId) {
+    ElMessage.warning('请先选择班级')
+    return
+  }
+  exportLoading.value = true
+  try {
+    const res = await scoreAPI.exportExcel(filterForm.examId, filterForm.classId, filterForm.subjectId)
+    // 提取文件名
+    const disposition = res.headers?.['content-disposition']
+    let filename = '成绩导出.xlsx'
+    if (disposition) {
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (match && match[1]) {
+        filename = decodeURIComponent(match[1].replace(/['"]/g, ''))
+      }
+    }
+    // 下载文件
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 const handleViewStudent = (row) => {

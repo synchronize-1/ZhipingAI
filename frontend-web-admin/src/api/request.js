@@ -23,6 +23,10 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
+    // blob 响应直接返回完整 response（用于文件下载，需要 headers 提取文件名）
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     // 新架构统一响应格式：{ code, data, message }
     if (res.code !== undefined) {

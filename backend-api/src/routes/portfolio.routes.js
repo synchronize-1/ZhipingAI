@@ -241,6 +241,23 @@ router.delete('/comments/:id', verifyToken, checkRole('admin', 'teacher'), async
   success(res, null, '评语删除成功');
 }));
 
+// AI 智能生成评语（仅教师/管理员）
+router.post('/comments/generate', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { studentId, semester, style, length } = req.body;
+
+  if (!studentId) {
+    return fail(res, '学生ID不能为空', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const comment = await PortfolioService.generateComment(studentId, {
+    semester: semester || null,
+    style: style || 'warm',
+    length: length || 'medium'
+  });
+
+  success(res, { comment }, '评语生成成功');
+}));
+
 // ==================== 班级成长档案（教师/管理员） ====================
 
 // 获取班级学生成长档案列表

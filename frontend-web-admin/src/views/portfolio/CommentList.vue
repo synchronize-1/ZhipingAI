@@ -6,6 +6,9 @@
       :breadcrumbs="breadcrumbs"
     >
       <template #extra>
+        <el-button v-if="isTeacherOrAdmin" type="success" :icon="MagicStick" @click="openAIGenerateDialog">
+          AI生成评语
+        </el-button>
         <el-button v-if="isTeacherOrAdmin" type="primary" :icon="Plus" @click="handleAdd">
           新增评语
         </el-button>
@@ -106,6 +109,99 @@
         />
       </div>
     </el-card>
+
+    <!-- AI 生成评语弹窗 -->
+    <el-dialog
+      v-model="aiDialogVisible"
+      title="AI 智能生成评语"
+      width="720px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="aiFormData" label-width="100px">
+        <el-form-item label="选择学生" required>
+          <el-select
+            v-model="aiFormData.studentId"
+            placeholder="请选择学生"
+            style="width: 100%"
+            filterable
+            clearable
+          >
+            <el-option
+              v-for="stu in studentOptions"
+              :key="stu.id"
+              :label="`${stu.name} (${stu.studentNo})`"
+              :value="stu.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="学期" required>
+          <el-input
+            v-model="aiFormData.semester"
+            placeholder="如：2024-2025第一学期"
+            clearable
+          />
+        </el-form-item>
+
+        <el-form-item label="评语风格">
+          <el-radio-group v-model="aiFormData.style">
+            <el-radio value="formal">正式</el-radio>
+            <el-radio value="warm">亲切</el-radio>
+            <el-radio value="encouraging">鼓励</el-radio>
+            <el-radio value="concise">简洁</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="评语长度">
+          <el-radio-group v-model="aiFormData.length">
+            <el-radio value="short">简短</el-radio>
+            <el-radio value="medium">中等</el-radio>
+            <el-radio value="long">详细</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button
+            type="primary"
+            :icon="MagicStick"
+            :loading="aiGenerating"
+            :disabled="!aiFormData.studentId || !aiFormData.semester"
+            @click="handleGenerateComment"
+          >
+            {{ aiGeneratedComment ? '重新生成' : '生成评语' }}
+          </el-button>
+          <span v-if="aiGenerating" class="generate-status">AI 正在生成中，请稍候...</span>
+        </el-form-item>
+      </el-form>
+
+      <!-- 生成结果展示区 -->
+      <div v-if="aiGeneratedComment" class="ai-result-section">
+        <div class="result-header">
+          <span class="result-title">生成结果</span>
+          <span class="word-count">{{ aiGeneratedComment.length }} 字</span>
+        </div>
+        <el-input
+          v-model="aiGeneratedComment"
+          type="textarea"
+          :rows="10"
+          placeholder="AI 生成的评语将显示在这里，您可以直接编辑修改..."
+          maxlength="2000"
+          show-word-limit
+        />
+        <div class="result-actions">
+          <el-button :icon="Refresh" :loading="aiGenerating" @click="handleGenerateComment">
+            重新生成
+          </el-button>
+          <el-button type="primary" :loading="aiSaveLoading" @click="handleSaveAIGenerated">
+            保存评语
+          </el-button>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="aiDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 查看详情弹窗 -->
     <el-dialog
@@ -255,7 +351,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Plus, Document, MagicStick } from '@element-plus/icons-vue'
+import { Plus, Document, MagicStick, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { commentAPI } from '@/api/portfolio'
@@ -365,6 +461,17 @@ const dialogMode = computed(() => formDialog.mode.value)
 const viewDialogVisible = ref(false)
 const viewData = ref({})
 const aiGenerating = ref(false)
+
+// AI 生成评语弹窗
+const aiDialogVisible = ref(false)
+const aiSaveLoading = ref(false)
+const aiFormData = reactive({
+  studentId: '',
+  semester: '',
+  style: 'warm',
+  length: 'medium'
+})
+const aiGeneratedComment = ref('')
 
 // 表单验证规则
 const formRules = {
@@ -534,6 +641,120 @@ const handleAIGenerate = async () => {
     console.error(error)
   } finally {
     aiGenerating.value = false
+  }
+}
+
+// 打开 AI 生成评语弹窗
+const openAIGenerateDialog = () => {
+  aiFormData.studentId = currentStudentId.value || ''
+  aiFormData.semester = ''
+  aiFormData.style = 'warm'
+  aiFormData.length = 'medium'
+  aiGeneratedComment.value = ''
+  aiDialogVisible.value = true
+}
+
+// 生成 AI 评语
+const handleGenerateComment = async () => {
+  if (!aiFormData.studentId) {
+    ElMessage.warning('请选择学生')
+    return
+  }
+  if (!aiFormData.semester) {
+    ElMessage.warning('请输入学期')
+    return
+  }
+
+  aiGenerating.value = true
+  try {
+    const res = await commentAPI.generate(aiFormData.studentId, {
+      semester: aiFormData.semester,
+      style: aiFormData.style,
+      length: aiFormData.length
+    })
+    aiGeneratedComment.value = res.data?.comment || ''
+    if (!aiGeneratedComment.value) {
+      ElMessage.warning('生成的评语内容为空，请重试')
+    } else {
+      ElMessage.success('评语生成成功，您可以编辑修改后保存')
+    }
+  } catch (error) {
+    ElMessage.error('生成失败，请稍后重试')
+    console.error('AI 生成评语失败:', error)
+  } finally {
+    aiGenerating.value = false
+  }
+}
+
+// 检查学生该学期是否已有评语
+const checkExistingComment = async () => {
+  try {
+    const res = await commentAPI.list(aiFormData.studentId, {
+      semester: aiFormData.semester,
+      pageSize: 10,
+      page: 1
+    })
+    // 兼容多种响应格式（与 useTable 保持一致）
+    let list = []
+    if (res.data?.list !== undefined) {
+      list = res.data.list
+    } else if (res.data?.data) {
+      list = res.data.data
+    } else if (Array.isArray(res.data)) {
+      list = res.data
+    }
+    return list.length > 0
+  } catch (error) {
+    console.error('检查评语失败:', error)
+    return false
+  }
+}
+
+// 保存 AI 生成的评语
+const handleSaveAIGenerated = async () => {
+  if (!aiGeneratedComment.value || aiGeneratedComment.value.trim().length < 10) {
+    ElMessage.warning('评语内容至少需要10个字符')
+    return
+  }
+
+  aiSaveLoading.value = true
+  try {
+    // 检查该学期是否已有评语
+    const hasExisting = await checkExistingComment()
+    if (hasExisting) {
+      try {
+        await ElMessageBox.confirm(
+          '该学生在该学期已有评语，是否覆盖原有评语？',
+          '覆盖确认',
+          {
+            confirmButtonText: '覆盖',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+      } catch {
+        return
+      }
+    }
+
+    const saveData = {
+      studentId: aiFormData.studentId,
+      semester: aiFormData.semester,
+      type: 'semester',
+      style: aiFormData.style,
+      source: 'ai',
+      content: aiGeneratedComment.value
+    }
+
+    await commentAPI.create(saveData)
+    ElMessage.success('评语保存成功')
+    aiDialogVisible.value = false
+    fetchData()
+  } catch (error) {
+    ElMessage.error('保存失败，请稍后重试')
+    console.error('保存 AI 评语失败:', error)
+  } finally {
+    aiSaveLoading.value = false
   }
 }
 
@@ -746,6 +967,44 @@ onMounted(() => {
       font-size: 12px;
       color: #909399;
     }
+  }
+
+  // AI 生成结果区域
+  .ai-result-section {
+    margin-top: 8px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+
+      .result-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #303133;
+      }
+
+      .word-count {
+        font-size: 13px;
+        color: #909399;
+      }
+    }
+
+    .result-actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+  }
+
+  .generate-status {
+    margin-left: 12px;
+    font-size: 13px;
+    color: #909399;
   }
 }
 </style>

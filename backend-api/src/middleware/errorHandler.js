@@ -29,6 +29,16 @@ function errorHandler(err, req, res, next) {
     statusCode = 409;
     errorCode = ErrorCode.CONFLICT;
     message = '数据已存在';
+  } else if (err.name === 'MulterError') {
+    statusCode = 400;
+    errorCode = ErrorCode.PARAM_VALIDATION;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      message = '文件大小超过限制（最大10MB）';
+    } else if (err.code === 'LIMIT_FILE_COUNT') {
+      message = '文件数量超过限制';
+    } else {
+      message = `文件上传错误：${err.message}`;
+    }
   }
 
   // 开发环境返回详细错误信息

@@ -3,6 +3,7 @@ const PortfolioSkill = require('../models/PortfolioSkill.model');
 const PortfolioHonor = require('../models/PortfolioHonor.model');
 const PortfolioMentalHealth = require('../models/PortfolioMentalHealth.model');
 const PortfolioComment = require('../models/PortfolioComment.model');
+const DeepSeekService = require('./deepseek.service');
 const { ErrorCode } = require('../utils/response');
 
 class PortfolioService {
@@ -378,6 +379,445 @@ class PortfolioService {
     }
 
     await PortfolioComment.delete(id);
+  }
+
+  // ==================== AI 智能评语生成 ====================
+
+  /**
+   * 获取学生最近两次考试成绩数据（用于比较进步退步）
+   * @param {number} studentId
+   * @returns {Promise<Object>} 最新考试成绩、各科详情、排名及与上次对比
+   */
+  static async getLatestExamDataForComment(studentId) {
+    // 获取最近两次考试
+    const [examRows] = await pool.execute(
+      `SELECT DISTINCT e.id, e.name, e.exam_date, e.semester
+       FROM exam_scores es
+       INNER JOIN exams e ON es.exam_id = e.id
+       WHERE es.student_id = ?
+       ORDER BY e.exam_date DESC, e.id DESC
+       LIMIT 2`,
+      [studentId]
+    );
+
+    if (examRows.length === 0) {
+      return null;
+    }
+
+    const latestExam = examRows[0];
+    const previousExam = examRows[1] || null;
+
+    // 获取最新考试的各科成绩
+    const [latestScores] = await pool.execute(
+      `SELECT es.subject_id, es.score, es.score_level, es.is_absent, 
+              es.rank_in_class, es.rank_in_grade,
+              s.name as subject_name
+       FROM exam_scores es
+       INNER JOIN subjects s ON es.subject_id = s.id
+       WHERE es.exam_id = ? AND es.student_id = ?
+       ORDER BY s.id`,
+      [latestExam.id, studentId]
+    );
+
+    // 计算最新考试总分和平均分
+    const validScores = latestScores.filter(s => !s.is_absent && s.score !== null);
+    const totalScore = validScores.reduce((sum, s) => sum + parseFloat(s.score), 0);
+    const avgScore = validScores.length > 0
+      ? parseFloat((totalScore / validScores.length).toFixed(2))
+      : null;
+
+    // 估算班级总分排名（取各科班级排名的平均值近似）
+    const classRanks = validScores
+      .filter(s => s.rank_in_class !== null)
+      .map(s => s.rank_in_class);
+    const avgClassRank = classRanks.length > 0
+      ? parseFloat((classRanks.reduce((a, b) => a + b, 0) / classRanks.length).toFixed(1))
+      : null;
+
+    let previousTotalScore = null;
+    let previousAvgScore = null;
+    let previousAvgClassRank = null;
+    let scoreChange = null;
+    let rankChange = null;
+
+    if (previousExam) {
+      const [prevScores] = await pool.execute(
+        `SELECT es.score, es.is_absent, es.rank_in_class
+         FROM exam_scores es
+         WHERE es.exam_id = ? AND es.student_id = ?`,
+        [previousExam.id, studentId]
+      );
+
+      const prevValidScores = prevScores.filter(s => !s.is_absent && s.score !== null);
+      previousTotalScore = prevValidScores.reduce((sum, s) => sum + parseFloat(s.score), 0);
+      previousAvgScore = prevValidScores.length > 0
+        ? parseFloat((previousTotalScore / prevValidScores.length).toFixed(2))
+        : null;
+
+      const prevClassRanks = prevValidScores
+        .filter(s => s.rank_in_class !== null)
+        .map(s => s.rank_in_class);
+      previousAvgClassRank = prevClassRanks.length > 0
+        ? parseFloat((prevClassRanks.reduce((a, b) => a + b, 0) / prevClassRanks.length).toFixed(1))
+        : null;
+
+      if (avgScore !== null && previousAvgScore !== null) {
+        scoreChange = parseFloat((avgScore - previousAvgScore).toFixed(2));
+      }
+      if (avgClassRank !== null && previousAvgClassRank !== null) {
+        // 排名数字越小表示越靠前，所以用 previous - latest
+        rankChange = parseFloat((previousAvgClassRank - avgClassRank).toFixed(1));
+      }
+    }
+
+    return {
+      exam: {
+        id: latestExam.id,
+        name: latestExam.name,
+        examDate: latestExam.exam_date,
+        semester: latestExam.semester
+      },
+      subjects: latestScores.map(s => ({
+        subjectName: s.subject_name,
+        score: s.score,
+        scoreLevel: s.score_level,
+        isAbsent: s.is_absent ? true : false,
+        rankInClass: s.rank_in_class,
+        rankInGrade: s.rank_in_grade
+      })),
+      totalScore: parseFloat(totalScore.toFixed(2)),
+      avgScore,
+      avgClassRank,
+      previousExam: previousExam ? {
+        id: previousExam.id,
+        name: previousExam.name,
+        examDate: previousExam.exam_date,
+        avgScore: previousAvgScore,
+        avgClassRank: previousAvgClassRank
+      } : null,
+      scoreChange,
+      rankChange
+    };
+  }
+
+  /**
+   * 获取学生已认证的技能列表
+   * @param {number} studentId
+   * @returns {Promise<Array>}
+   */
+  static async getVerifiedSkillsForComment(studentId) {
+    const [rows] = await pool.execute(
+      `SELECT skill_name, skill_category, level, verified_at
+       FROM portfolio_skills
+       WHERE student_id = ? AND verified_by IS NOT NULL
+       ORDER BY level DESC, verified_at DESC
+       LIMIT 20`,
+      [studentId]
+    );
+    return rows.map(r => ({
+      skillName: r.skill_name,
+      skillCategory: r.skill_category,
+      level: r.level,
+      verifiedAt: r.verified_at
+    }));
+  }
+
+  /**
+   * 获取学生近期荣誉（最近1学期或最近5条）
+   * @param {number} studentId
+   * @param {string} semester
+   * @returns {Promise<Array>}
+   */
+  static async getRecentHonorsForComment(studentId, semester = null) {
+    let query = `
+      SELECT title, honor_type, level, awarding_org, awarded_date, semester
+      FROM portfolio_honors
+      WHERE student_id = ? AND verified_by IS NOT NULL
+    `;
+    const params = [studentId];
+
+    if (semester) {
+      query += ' AND semester = ?';
+      params.push(semester);
+    }
+
+    query += ' ORDER BY awarded_date DESC, created_at DESC LIMIT 10';
+
+    const [rows] = await pool.execute(query, params);
+    return rows.map(r => ({
+      title: r.title,
+      honorType: r.honor_type,
+      level: r.level,
+      awardingOrg: r.awarding_org,
+      awardedDate: r.awarded_date,
+      semester: r.semester
+    }));
+  }
+
+  /**
+   * 获取最近的心理健康测评结果
+   * @param {number} studentId
+   * @returns {Promise<Object|null>}
+   */
+  static async getLatestMentalHealthForComment(studentId) {
+    const [rows] = await pool.execute(
+      `SELECT assessment_date, assessment_type, overall_score, stress_level, mood_score, notes
+       FROM portfolio_mental_health
+       WHERE student_id = ?
+       ORDER BY assessment_date DESC, created_at DESC
+       LIMIT 1`,
+      [studentId]
+    );
+    if (rows.length === 0) return null;
+    return {
+      assessmentDate: rows[0].assessment_date,
+      assessmentType: rows[0].assessment_type,
+      overallScore: rows[0].overall_score,
+      stressLevel: rows[0].stress_level,
+      moodScore: rows[0].mood_score,
+      notes: rows[0].notes
+    };
+  }
+
+  /**
+   * 构造评语生成的系统提示词
+   * @param {Object} options
+   * @param {string} options.style - 风格：formal/warm/encouraging/concise
+   * @param {string} options.length - 长度：short/medium/long
+   * @returns {string}
+   */
+  static buildCommentSystemPrompt(options = {}) {
+    const { style = 'warm', length = 'medium' } = options;
+
+    const styleDescriptions = {
+      formal: '语言正式规范，措辞严谨，评价客观公正，符合传统教师评语的正式风格。',
+      warm: '语言温暖亲切，充满人文关怀，像一位关爱学生的班主任在与学生谈心，语气真诚动人。',
+      encouraging: '语言积极向上，以鼓励为主，善于发现学生的闪光点，给予学生信心和动力，充满正能量。',
+      concise: '语言简洁明了，重点突出，不拖泥带水，直接点明优缺点和改进方向。'
+    };
+
+    const lengthRequirements = {
+      short: '字数控制在300-400字左右，精炼扼要。',
+      medium: '字数控制在400-600字左右，内容充实。',
+      long: '字数控制在600-800字左右，详尽全面。'
+    };
+
+    return `你是一位经验丰富、充满爱心的资深班主任老师，擅长根据学生的综合表现写出个性化、有温度的学期评语。
+
+你的写作原则：
+1. 客观真实：基于提供的学生数据进行评价，不编造不存在的事实
+2. 以鼓励为主：善于发现学生的闪光点和进步，用积极的语言激励学生
+3. 指出不足：诚恳地指出学生需要改进的地方，但要注意方式方法
+4. 给出建议：针对学生的情况，提出具体、可操作的改进建议
+5. 符合身份：你就是一位真实的老师，绝对不能出现"作为AI"、"作为人工智能"、"根据算法"等表述
+6. 人称使用：用"你"称呼学生，像老师对学生说话的口吻
+
+写作风格要求：
+${styleDescriptions[style] || styleDescriptions.warm}
+
+篇幅要求：
+${lengthRequirements[length] || lengthRequirements.medium}
+
+评语结构建议（可灵活调整）：
+- 开头：总体评价，点明学生本学期的整体表现
+- 学习方面：结合成绩数据，分析学习状态、进步与不足
+- 综合素质：结合技能、荣誉等，评价学生的全面发展
+- 心理状态：结合心理健康数据，关注学生的情绪和压力（如数据可用）
+- 结尾：总结期望，鼓励学生继续努力
+
+请直接输出评语内容，不要加标题或其他说明文字。`;
+  }
+
+  /**
+   * 构造评语生成的用户消息（包含学生数据）
+   * @param {Object} studentData
+   * @param {string} semester
+   * @returns {string}
+   */
+  static buildCommentUserMessage(studentData, semester) {
+    const { basicInfo, examData, skills, honors, mentalHealth } = studentData;
+    const lines = [];
+
+    lines.push(`【学生基本信息】`);
+    lines.push(`姓名：${basicInfo.name || '未知'}`);
+    if (basicInfo.className) lines.push(`班级：${basicInfo.className}`);
+    if (basicInfo.grade) lines.push(`年级：${basicInfo.grade}`);
+    lines.push(`学期：${semester || '本学期'}`);
+    lines.push('');
+
+    // 成绩数据
+    lines.push(`【学习成绩情况】`);
+    if (examData) {
+      lines.push(`最近考试：${examData.exam.name}`);
+      lines.push(`考试日期：${examData.exam.exam_date ? new Date(examData.exam.exam_date).toLocaleDateString('zh-CN') : '未知'}`);
+      lines.push(`总分数：${examData.totalScore}`);
+      if (examData.avgScore !== null) lines.push(`平均分：${examData.avgScore}`);
+      if (examData.avgClassRank !== null) lines.push(`班级平均排名：第${examData.avgClassRank}名`);
+      lines.push('');
+      lines.push('各科成绩：');
+      for (const subject of examData.subjects) {
+        if (subject.isAbsent) {
+          lines.push(`  ${subject.subjectName}：缺考`);
+        } else {
+          let scoreInfo = `  ${subject.subjectName}：${subject.score}分（${subject.scoreLevel || '未评级'}）`;
+          if (subject.rankInClass) scoreInfo += `，班级第${subject.rankInClass}名`;
+          lines.push(scoreInfo);
+        }
+      }
+      lines.push('');
+
+      // 与上次考试对比
+      if (examData.previousExam) {
+        lines.push(`与上次考试（${examData.previousExam.name}）对比：`);
+        if (examData.scoreChange !== null) {
+          const direction = examData.scoreChange > 0 ? '上升' : (examData.scoreChange < 0 ? '下降' : '持平');
+          lines.push(`  平均分变化：${direction} ${Math.abs(examData.scoreChange)}分`);
+        }
+        if (examData.rankChange !== null) {
+          const direction = examData.rankChange > 0 ? '进步' : (examData.rankChange < 0 ? '退步' : '持平');
+          lines.push(`  班级排名变化：${direction} ${Math.abs(examData.rankChange)}名`);
+        }
+      }
+    } else {
+      lines.push('暂无考试成绩数据');
+    }
+    lines.push('');
+
+    // 技能数据
+    lines.push(`【技能特长】`);
+    if (skills && skills.length > 0) {
+      for (const skill of skills) {
+        lines.push(`  ${skill.skillName}（等级：${skill.level}级${skill.skillCategory ? '，类别：' + skill.skillCategory : ''}）`);
+      }
+    } else {
+      lines.push('暂无已认证的技能记录');
+    }
+    lines.push('');
+
+    // 荣誉数据
+    lines.push(`【荣誉获奖】`);
+    if (honors && honors.length > 0) {
+      for (const honor of honors) {
+        let honorInfo = `  ${honor.title}`;
+        if (honor.level) honorInfo += `（${honor.level}）`;
+        if (honor.awardingOrg) honorInfo += ` - ${honor.awardingOrg}`;
+        if (honor.awardedDate) honorInfo += `，${new Date(honor.awardedDate).toLocaleDateString('zh-CN')}`;
+        lines.push(honorInfo);
+      }
+    } else {
+      lines.push('暂无荣誉获奖记录');
+    }
+    lines.push('');
+
+    // 心理健康数据
+    lines.push(`【心理健康状况】`);
+    if (mentalHealth) {
+      if (mentalHealth.moodScore !== null && mentalHealth.moodScore !== undefined) {
+        lines.push(`情绪指数：${mentalHealth.moodScore}/100`);
+      }
+      if (mentalHealth.stressLevel) {
+        lines.push(`压力水平：${mentalHealth.stressLevel}`);
+      }
+      if (mentalHealth.overallScore !== null && mentalHealth.overallScore !== undefined) {
+        lines.push(`综合评分：${mentalHealth.overallScore}/100`);
+      }
+      if (mentalHealth.assessmentDate) {
+        lines.push(`测评日期：${new Date(mentalHealth.assessmentDate).toLocaleDateString('zh-CN')}`);
+      }
+      if (mentalHealth.notes) {
+        lines.push(`备注：${mentalHealth.notes}`);
+      }
+    } else {
+      lines.push('暂无心理健康测评数据');
+    }
+    lines.push('');
+
+    lines.push('请根据以上学生信息，为该学生写一份学期评语。');
+
+    return lines.join('\n');
+  }
+
+  /**
+   * AI 生成学生学期评语
+   * @param {number} studentId - 学生ID
+   * @param {Object} options - 配置选项
+   * @param {string} options.semester - 学期（如"2024-2025第一学期"）
+   * @param {string} options.style - 风格：formal/warm/encouraging/concise
+   * @param {string} options.length - 长度：short/medium/long
+   * @returns {Promise<string>} - 生成的评语文本
+   */
+  static async generateComment(studentId, options = {}) {
+    const { semester, style = 'warm', length = 'medium' } = options;
+
+    // 1. 验证参数
+    if (!studentId) {
+      const error = new Error('学生ID不能为空');
+      error.name = 'ValidationError';
+      error.code = ErrorCode.PARAM_VALIDATION;
+      throw error;
+    }
+
+    const validStyles = ['formal', 'warm', 'encouraging', 'concise'];
+    if (!validStyles.includes(style)) {
+      const error = new Error(`无效的评语风格，可选值：${validStyles.join(', ')}`);
+      error.name = 'ValidationError';
+      error.code = ErrorCode.PARAM_VALIDATION;
+      throw error;
+    }
+
+    const validLengths = ['short', 'medium', 'long'];
+    if (!validLengths.includes(length)) {
+      const error = new Error(`无效的评语长度，可选值：${validLengths.join(', ')}`);
+      error.name = 'ValidationError';
+      error.code = ErrorCode.PARAM_VALIDATION;
+      throw error;
+    }
+
+    // 2. 并行收集学生数据
+    const [
+      basicInfo,
+      examData,
+      skills,
+      honors,
+      mentalHealth
+    ] = await Promise.all([
+      this.getStudentBasicInfo(studentId).catch(() => ({ name: '未知学生' })),
+      this.getLatestExamDataForComment(studentId).catch(() => null),
+      this.getVerifiedSkillsForComment(studentId).catch(() => []),
+      this.getRecentHonorsForComment(studentId, semester).catch(() => []),
+      this.getLatestMentalHealthForComment(studentId).catch(() => null)
+    ]);
+
+    // 3. 构造消息
+    const systemPrompt = this.buildCommentSystemPrompt({ style, length });
+    const userMessage = this.buildCommentUserMessage(
+      { basicInfo, examData, skills, honors, mentalHealth },
+      semester
+    );
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ];
+
+    // 4. 调用 DeepSeek API
+    try {
+      const comment = await DeepSeekService.chat(messages, {
+        model: 'deepseek-chat',
+        temperature: 0.8,
+        maxTokens: length === 'long' ? 1200 : (length === 'short' ? 600 : 900)
+      });
+
+      // 清理可能的多余空行和首尾空格
+      return comment.trim();
+    } catch (error) {
+      console.error('AI 评语生成失败:', error.message);
+      const apiError = new Error(`AI评语生成失败：${error.message}`);
+      apiError.name = 'AIServiceError';
+      apiError.code = ErrorCode.SERVICE_UNAVAILABLE;
+      apiError.cause = error;
+      throw apiError;
+    }
   }
 
   // ==================== 成长档案总览 ====================

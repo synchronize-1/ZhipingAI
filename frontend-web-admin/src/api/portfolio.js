@@ -39,5 +39,6 @@ export const commentAPI = {
   latest: (studentId) => request.get(`/portfolio/comments/latest/${studentId}`),
   create: (data) => request.post('/portfolio/comments', data),
   update: (id, data) => request.put(`/portfolio/comments/${id}`, data),
-  delete: (id) => request.delete(`/portfolio/comments/${id}`)
+  delete: (id) => request.delete(`/portfolio/comments/${id}`),
+  generate: (studentId, params) => request.post('/portfolio/comments/generate', { studentId, ...params })
 }

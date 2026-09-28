@@ -17,6 +17,8 @@ const aiHealthRoutes = require('./routes/aiHealth');
 // 新架构模块
 const teachingRoutes = require('./routes/teaching.routes');
 const portfolioRoutes = require('./routes/portfolio.routes');
+const adminUserRoutes = require('./routes/admin.users.routes');
+const dashboardV2Routes = require('./routes/dashboard.v2');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -50,6 +52,9 @@ app.use('/api/ai-health', aiHealthRoutes);
 // 新架构模块路由
 app.use('/api/teaching', teachingRoutes);
 app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+// 新版首页 Dashboard（按角色返回聚合数据）
+app.use('/api/home', dashboardV2Routes);
 
 // WebSocket 实时通讯
 require('./websockets/socketHandler')(io);
