@@ -515,6 +515,53 @@ class UserService {
       results
     };
   }
+
+  /**
+   * 生成用户导入模板 Excel
+   * @param {string} role - 目标角色：teacher/student
+   * @returns {{ buffer: Buffer, fileName: string }}
+   */
+  static async generateImportTemplate(role) {
+    if (!role || !['teacher', 'student'].includes(role)) {
+      const error = new Error('角色不合法，仅支持 teacher/student');
+      error.name = 'ValidationError';
+      error.code = ErrorCode.PARAM_VALIDATION;
+      throw error;
+    }
+
+    const isStudent = role === 'student';
+    const headers = isStudent
+      ? ['学号', '姓名', '邮箱(可选)', '手机号(可选)', '班级(可选)']
+      : ['工号', '姓名', '邮箱(可选)', '手机号(可选)', '部门(可选)'];
+
+    const excelData = [headers];
+
+    if (isStudent) {
+      const classes = await Class.getAllSimple();
+      excelData.push(['20240601', '张三', 'zhangsan@example.com', '13800000000', classes[0]?.name || '高一(1)班']);
+      excelData.push(['20240602', '李四', '', '', classes[1]?.name || '高一(2)班']);
+      excelData.push(['', '', '', '', '']);
+      excelData.push(['说明：学号唯一且不可与已有账号重复；班级需与系统中班级名称完全一致；不填班级则暂不分配。', '', '', '', '']);
+    } else {
+      excelData.push(['T2024009', '王老师', 'wang@example.com', '13800000000', '语文组']);
+      excelData.push(['T2024010', '李老师', '', '', '数学组']);
+      excelData.push(['', '', '', '', '']);
+      excelData.push(['说明：工号唯一且不可与已有账号重复；部门可自定义填写。', '', '', '', '']);
+    }
+
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+    worksheet['!cols'] = [
+      { wch: 14 }, { wch: 12 }, { wch: 26 }, { wch: 16 }, { wch: 18 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, isStudent ? '学生导入' : '教师导入');
+
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const fileName = isStudent ? '学生导入模板.xlsx' : '教师导入模板.xlsx';
+
+    return { buffer, fileName };
+  }
 }
 
 module.exports = UserService;

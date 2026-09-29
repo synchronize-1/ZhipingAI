@@ -236,6 +236,53 @@ router.get('/analysis/student/:studentId', verifyToken, checkRole('admin', 'teac
   success(res, analysis);
 }));
 
+// ==================== AI 学情诊断（管理员、教师） ====================
+
+// 生成班级学情诊断报告
+router.post('/analysis/class/diagnosis', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { examId, classId } = req.body;
+  if (!examId) {
+    return fail(res, '缺少参数 examId', ErrorCode.PARAM_VALIDATION);
+  }
+  if (!classId) {
+    return fail(res, '缺少参数 classId', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const result = await TeachingService.generateClassDiagnosis(examId, classId, req.user.id);
+  success(res, result, '班级学情诊断报告生成成功');
+}));
+
+// 生成个人学情画像
+router.post('/analysis/student/diagnosis', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { studentId, examId } = req.body;
+  if (!studentId) {
+    return fail(res, '缺少参数 studentId', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const result = await TeachingService.generateStudentDiagnosis(studentId, examId || null, req.user.id);
+  success(res, result, '个人学情画像生成成功');
+}));
+
+// 诊断历史记录（必须注册在 /analysis/diagnosis/:id 之前）
+router.get('/analysis/diagnosis/history', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { reportType, targetId, limit } = req.query;
+  if (!reportType) {
+    return fail(res, '缺少参数 reportType', ErrorCode.PARAM_VALIDATION);
+  }
+  if (!targetId) {
+    return fail(res, '缺少参数 targetId', ErrorCode.PARAM_VALIDATION);
+  }
+
+  const list = await TeachingService.getDiagnosisHistory(reportType, targetId, limit);
+  success(res, list);
+}));
+
+// 诊断报告详情
+router.get('/analysis/diagnosis/:id', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const report = await TeachingService.getDiagnosisDetail(req.params.id);
+  success(res, report);
+}));
+
 // ==================== 班级与学科（管理员） ====================
 
 // 获取班级列表

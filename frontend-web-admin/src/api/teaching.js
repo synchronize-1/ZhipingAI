@@ -54,7 +54,15 @@ export const scoreAPI = {
 export const analysisAPI = {
   classAnalysis: (examId, classId) => request.get(`/teaching/analysis/class/${examId}/${classId}`),
   gradeAnalysis: (examId) => request.get(`/teaching/analysis/grade/${examId}`),
-  studentAnalysis: (studentId) => request.get(`/teaching/analysis/student/${studentId}`)
+  studentAnalysis: (studentId) => request.get(`/teaching/analysis/student/${studentId}`),
+  // AI 诊断（调用大模型，耗时较长，单独放宽超时时间）
+  classDiagnosis: (examId, classId) =>
+    request.post('/teaching/analysis/class/diagnosis', { examId, classId }, { timeout: 120000 }),
+  studentDiagnosis: (studentId, examId) =>
+    request.post('/teaching/analysis/student/diagnosis', { studentId, ...(examId ? { examId } : {}) }, { timeout: 120000 }),
+  diagnosisHistory: (reportType, targetId, limit = 10) =>
+    request.get('/teaching/analysis/diagnosis/history', { params: { reportType, targetId, limit } }),
+  diagnosisDetail: (id) => request.get(`/teaching/analysis/diagnosis/${id}`)
 }
 
 // 班级与学科

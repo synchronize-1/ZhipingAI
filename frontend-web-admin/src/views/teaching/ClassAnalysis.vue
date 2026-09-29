@@ -39,6 +39,14 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :icon="Search" :loading="loading" @click="loadAnalysisData">查询</el-button>
+          <el-button
+            type="success"
+            :icon="MagicStick"
+            :disabled="!filterForm.examId || !filterForm.classId"
+            @click="openDiagnosis"
+          >
+            AI 学情诊断
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -201,12 +209,70 @@
         </el-row>
       </el-card>
     </div>
+
+    <!-- AI 学情诊断抽屉 -->
+    <el-drawer
+      v-model="diagnosisVisible"
+      :title="diagnosisDrawerTitle"
+      size="620px"
+      :close-on-click-modal="false"
+      class="diagnosis-drawer"
+    >
+      <div class="diagnosis-body">
+        <!-- 生成中 -->
+        <div v-if="diagnosisLoading" class="diagnosis-loading">
+          <el-icon class="diagnosis-loading__icon" :size="42"><Loading /></el-icon>
+          <p class="diagnosis-loading__text">AI 正在分析班级学情，请稍候…</p>
+          <p class="diagnosis-loading__tip">报告生成通常需要 10-40 秒，请勿关闭窗口</p>
+          <el-skeleton :rows="6" animated style="margin-top: 24px" />
+        </div>
+
+        <!-- 生成结果 -->
+        <template v-else-if="diagnosisContent">
+          <div class="diagnosis-report__head">
+            <h3 class="diagnosis-report__title">{{ diagnosisTitle }}</h3>
+            <span v-if="diagnosisCreatedAt" class="diagnosis-report__time">生成时间：{{ formatTime(diagnosisCreatedAt) }}</span>
+          </div>
+          <div class="diagnosis-report__content">{{ diagnosisContent }}</div>
+        </template>
+
+        <!-- 空状态 -->
+        <el-empty v-else description="暂无诊断报告，点击下方按钮生成" :image-size="100" />
+
+        <!-- 历史报告 -->
+        <div class="diagnosis-history">
+          <div class="diagnosis-history__head">
+            <span class="diagnosis-history__title">历史报告</span>
+            <el-button link type="primary" :icon="Refresh" :loading="historyLoading" @click="loadDiagnosisHistory">刷新</el-button>
+          </div>
+          <el-empty v-if="!historyLoading && diagnosisHistoryList.length === 0" description="暂无历史报告" :image-size="60" />
+          <ul v-else v-loading="historyLoading" class="diagnosis-history__list">
+            <li
+              v-for="item in diagnosisHistoryList"
+              :key="item.id"
+              :class="{ 'is-active': item.id === activeReportId }"
+              @click="handleHistoryClick(item)"
+            >
+              <span class="history-title">{{ item.title || '班级学情诊断报告' }}</span>
+              <span class="history-time">{{ formatTime(item.createdAt) }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="diagnosis-footer">
+          <el-button :icon="DocumentCopy" :disabled="!diagnosisContent" @click="copyDiagnosisContent">复制内容</el-button>
+          <el-button type="primary" :icon="Refresh" :loading="diagnosisLoading" @click="generateDiagnosis">重新生成</el-button>
+        </div>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, nextTick, computed } from 'vue'
-import { Search, TrendCharts, CaretTop, CaretBottom, CircleCheck, Medal, User, CircleCheckFilled } from '@element-plus/icons-vue'
+import { Search, TrendCharts, CaretTop, CaretBottom, CircleCheck, Medal, User, CircleCheckFilled, MagicStick, Loading, Refresh, DocumentCopy } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { analysisAPI, examAPI, classAPI } from '@/api/teaching'
 import { useECharts } from '@/composables/useECharts'
@@ -229,6 +295,21 @@ const analysisData = ref({})
 const topStudents = ref([])
 const weakSubjects = ref([])
 const suggestions = ref([])
+
+// AI 诊断相关状态
+const diagnosisVisible = ref(false)
+const diagnosisLoading = ref(false)
+const diagnosisContent = ref('')
+const diagnosisTitle = ref('')
+const diagnosisCreatedAt = ref('')
+const diagnosisHistoryList = ref([])
+const historyLoading = ref(false)
+const activeReportId = ref('')
+
+const diagnosisDrawerTitle = 'AI 学情诊断'
+
+const currentExamName = computed(() => examList.value.find(e => e.id === filterForm.examId)?.name || '')
+const currentClassName = computed(() => classList.value.find(c => c.id === filterForm.classId)?.name || '')
 
 // 图表 refs
 const subjectBarChartRef = ref(null)
@@ -453,6 +534,103 @@ const renderRateBarChart = () => {
   rateBarChart.setOption(option, true)
 }
 
+// ==================== AI 学情诊断 ====================
+const formatTime = (time) => {
+  if (!time) return '--'
+  const d = new Date(time)
+  if (Number.isNaN(d.getTime())) return time
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const openDiagnosis = () => {
+  if (!filterForm.examId || !filterForm.classId) {
+    ElMessage.warning('请选择考试和班级')
+    return
+  }
+  diagnosisVisible.value = true
+  generateDiagnosis()
+}
+
+const generateDiagnosis = async () => {
+  if (!filterForm.examId || !filterForm.classId) {
+    ElMessage.warning('请选择考试和班级')
+    return
+  }
+  diagnosisLoading.value = true
+  diagnosisContent.value = ''
+  activeReportId.value = ''
+  try {
+    const res = await analysisAPI.classDiagnosis(filterForm.examId, filterForm.classId)
+    const data = res.data || {}
+    diagnosisContent.value = data.content || ''
+    diagnosisTitle.value = [data.examName || currentExamName.value, data.className || currentClassName.value]
+      .filter(Boolean)
+      .join(' · ') || '班级学情诊断报告'
+    diagnosisCreatedAt.value = data.createdAt || ''
+    activeReportId.value = data.reportId || ''
+    await loadDiagnosisHistory()
+  } catch (error) {
+    const isTimeout = error?.code === 'ECONNABORTED' || /timeout/i.test(error?.message || '')
+    ElMessage.error(isTimeout ? 'AI 诊断生成超时，请稍后重试' : 'AI 诊断生成失败，可能是 AI 服务未配置，请联系管理员')
+  } finally {
+    diagnosisLoading.value = false
+  }
+}
+
+const loadDiagnosisHistory = async () => {
+  if (!filterForm.classId) return
+  historyLoading.value = true
+  try {
+    const res = await analysisAPI.diagnosisHistory('class', filterForm.classId, 10)
+    diagnosisHistoryList.value = Array.isArray(res.data) ? res.data : (res.data?.list || [])
+  } catch (error) {
+    console.error('加载诊断历史失败:', error)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const handleHistoryClick = async (item) => {
+  activeReportId.value = item.id
+  if (item.content) {
+    diagnosisContent.value = item.content
+    diagnosisTitle.value = item.title || '班级学情诊断报告'
+    diagnosisCreatedAt.value = item.createdAt || ''
+    return
+  }
+  try {
+    const res = await analysisAPI.diagnosisDetail(item.id)
+    const data = res.data || {}
+    diagnosisContent.value = data.content || ''
+    diagnosisTitle.value = data.title || '班级学情诊断报告'
+    diagnosisCreatedAt.value = data.createdAt || ''
+  } catch (error) {
+    ElMessage.error('加载诊断报告详情失败')
+  }
+}
+
+const copyDiagnosisContent = async () => {
+  if (!diagnosisContent.value) return
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(diagnosisContent.value)
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = diagnosisContent.value
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+    }
+    ElMessage.success('已复制到剪贴板')
+  } catch (error) {
+    ElMessage.error('复制失败，请手动选择内容复制')
+  }
+}
+
 onMounted(() => {
   loadExamList()
   loadClassList()
@@ -571,5 +749,128 @@ onMounted(() => {
       }
     }
   }
+
+  .diagnosis-body {
+    .diagnosis-loading {
+      text-align: center;
+      padding: 24px 0;
+
+      &__icon {
+        color: #667eea;
+        animation: diagnosis-rotate 1.4s linear infinite;
+      }
+
+      &__text {
+        margin: 16px 0 4px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #303133;
+      }
+
+      &__tip {
+        margin: 0;
+        font-size: 13px;
+        color: #909399;
+      }
+    }
+
+    .diagnosis-report__head {
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #ebeef5;
+
+      .diagnosis-report__title {
+        margin: 0 0 6px;
+        font-size: 17px;
+        font-weight: 600;
+        color: #303133;
+      }
+
+      .diagnosis-report__time {
+        font-size: 12px;
+        color: #909399;
+      }
+    }
+
+    .diagnosis-report__content {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #303133;
+    }
+
+    .diagnosis-history {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #ebeef5;
+
+      &__head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+
+      &__title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #606266;
+      }
+
+      &__list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        min-height: 60px;
+
+        li {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 10px 12px;
+          margin-bottom: 8px;
+          background: #f5f7fa;
+          border-radius: 4px;
+          font-size: 13px;
+          cursor: pointer;
+          transition: background 0.2s;
+
+          &:hover {
+            background: #ecf5ff;
+          }
+
+          &.is-active {
+            background: #ecf5ff;
+            border-left: 3px solid #409eff;
+          }
+
+          .history-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #303133;
+          }
+
+          .history-time {
+            flex-shrink: 0;
+            color: #909399;
+          }
+        }
+      }
+    }
+  }
+
+  .diagnosis-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@keyframes diagnosis-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 </style>

@@ -1,9 +1,11 @@
 const XLSX = require('xlsx');
+const pool = require('../config/database');
 const Exam = require('../models/Exam.model');
 const Subject = require('../models/Subject.model');
 const Class = require('../models/Class.model');
 const User = require('../models/User');
 const ExamScore = require('../models/ExamScore.model');
+const DeepSeekService = require('./deepseek.service');
 const { ErrorCode } = require('../utils/response');
 
 class TeachingService {
@@ -1043,7 +1045,7 @@ class TeachingService {
     // 成绩趋势（历次考试总分/平均分）
     const trend = history.map(exam => {
       const scores = exam.subjects.filter(s => s.score !== null && s.is_absent === 0);
-      const total = scores.reduce((sum, s) => sum + (s.score || 0), 0);
+      const total = scores.reduce((sum, s) => sum + Number(s.score || 0), 0);
       const avg = scores.length > 0 ? parseFloat((total / scores.length).toFixed(2)) : 0;
       return {
         examId: exam.id,
@@ -1084,7 +1086,7 @@ class TeachingService {
       const subj = subjectMap[sid];
       const validScores = subj.scores.filter(s => s.score !== null);
       if (validScores.length > 0) {
-        const avg = validScores.reduce((sum, s) => sum + s.score, 0) / validScores.length;
+        const avg = validScores.reduce((sum, s) => sum + Number(s.score), 0) / validScores.length;
         subjectAverages.push({
           subjectId: subj.subjectId,
           subjectName: subj.subjectName,
@@ -1105,6 +1107,375 @@ class TeachingService {
       subjectTrend: subjectMap,
       strongSubjects,
       weakSubjects
+    };
+  }
+
+  // ==================== AI 学情诊断 ====================
+
+  /**
+   * 构造班级学情诊断的 prompt
+   */
+  static buildClassDiagnosisMessages(analysis) {
+    const { exam, class: cls, subjectStats, weakSubjects, topStudents, overall } = analysis;
+
+    const subjectLines = subjectStats.map((s) => {
+      const diff = s.avgScoreDiff === null || s.avgScoreDiff === undefined
+        ? '无年级对比数据'
+        : (s.avgScoreDiff >= 0 ? `高于年级平均 ${s.avgScoreDiff} 分` : `低于年级平均 ${Math.abs(s.avgScoreDiff)} 分`);
+      return `${s.subjectName}：满分${s.fullScore}，班级平均${s.avgScore === null ? '无' : s.avgScore}分，` +
+        `最高${s.maxScore === null ? '无' : s.maxScore}分，最低${s.minScore === null ? '无' : s.minScore}分，` +
+        `及格率${s.passRate === null ? '无' : s.passRate + '%'}，优秀率${s.excellentRate === null ? '无' : s.excellentRate + '%'}，` +
+        `参考人数${s.studentCount}，${diff}`;
+    }).join('\n');
+
+    const weakLines = weakSubjects.length > 0
+      ? weakSubjects.map((s) => `${s.subjectName}（平均分差 ${s.avgScoreDiff === null ? '无' : s.avgScoreDiff}，及格率差 ${s.passRateDiff === null ? '无' : s.passRateDiff}%）`).join('、')
+      : '无明显薄弱学科';
+
+    // 各科前三名学生
+    const topLines = subjectStats.map((s) => {
+      const list = topStudents[s.subjectId] || [];
+      const names = list.slice(0, 3).map((t) => `${t.studentName}(${t.score}分)`).join('、');
+      return `${s.subjectName}：${names || '暂无数据'}`;
+    }).join('\n');
+
+    const systemPrompt =
+      '你是一位资深的中学教学质量管理专家，擅长基于考试成绩数据撰写班级学情诊断报告。' +
+      '你的分析客观、专业、有针对性，善于从数据中发现教学问题并给出可落地的改进建议。' +
+      '请直接输出报告正文，使用纯文本结构化格式（小标题 + 段落），' +
+      '不要使用 Markdown 语法（不要使用 #、*、-、表格、代码块等任何标记符号），小标题直接写文字即可。';
+
+    const userMessage =
+      `请根据以下班级考试数据，撰写一份班级学情诊断报告。\n\n` +
+      `【基本信息】\n` +
+      `考试名称：${exam.name}\n` +
+      `考试类型：${exam.examType || '未标注'}\n` +
+      `年级：${exam.grade || cls.grade || '未标注'}\n` +
+      `班级：${cls.name}\n` +
+      `考试科目数：${overall.subjectCount}\n` +
+      `班级平均及格率：${overall.avgPassRate}%\n` +
+      `班级平均优秀率：${overall.avgExcellentRate}%\n\n` +
+      `【各学科统计】\n${subjectLines}\n\n` +
+      `【薄弱学科】\n${weakLines}\n\n` +
+      `【各科班级前列学生】\n${topLines}\n\n` +
+      `【报告要求】\n` +
+      `1. 全文 400-800 字，纯文本，使用小标题加段落的形式，不要使用 Markdown 表格。\n` +
+      `2. 必须包含以下部分：\n` +
+      `   一、整体评价：结合及格率、优秀率与年级平均水平，总体判断班级学习状况。\n` +
+      `   二、优势学科分析：指出相对突出或高于年级平均的学科，分析可能原因。\n` +
+      `   三、薄弱学科分析：指出低于年级平均或及格率偏低的学科，分析问题所在。\n` +
+      `   四、班级共性问题：从数据中归纳班级整体存在的共性问题（如偏科、后进面大、尖子生不突出等）。\n` +
+      `   五、改进建议：分别从「教师层面」（教学方法、作业分层、针对性辅导等）和「班级管理层面」（学习氛围、学法指导、家校协同等）给出具体可执行的建议。\n` +
+      `3. 分析要结合给出的具体数据，避免空泛套话。`;
+
+    return [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ];
+  }
+
+  /**
+   * 构造个人学情画像的 prompt
+   */
+  static buildStudentDiagnosisMessages(student, analysis, examId) {
+    const { name, class_name: className, grade } = student;
+
+    let dataSection = '';
+    if (examId) {
+      const { examName, radarData, strongSubjects, weakSubjects, classRankRange, gradeRankRange } = analysis;
+      const subjectLines = radarData.map((s) => `${s.subject}：${s.score}分`).join('、');
+      const strongLines = strongSubjects.length > 0
+        ? strongSubjects.map((s) => `${s.subjectName}(${s.score}分，班级第${s.rankInClass || '无'}名，年级第${s.rankInGrade || '无'}名)`).join('、')
+        : '暂无';
+      const weakLines = weakSubjects.length > 0
+        ? weakSubjects.map((s) => `${s.subjectName}(${s.score}分，班级第${s.rankInClass || '无'}名，年级第${s.rankInGrade || '无'}名)`).join('、')
+        : '暂无';
+      const classRank = classRankRange
+        ? `最好 ${classRankRange.best} 名，最差 ${classRankRange.worst} 名，平均 ${classRankRange.avg} 名`
+        : '暂无';
+      const gradeRank = gradeRankRange
+        ? `最好 ${gradeRankRange.best} 名，最差 ${gradeRankRange.worst} 名，平均 ${gradeRankRange.avg} 名`
+        : '暂无';
+
+      dataSection =
+        `【本次考试】\n` +
+        `考试名称：${examName}\n` +
+        `各科成绩：${subjectLines}\n` +
+        `优势学科：${strongLines}\n` +
+        `薄弱学科：${weakLines}\n` +
+        `班级排名区间：${classRank}\n` +
+        `年级排名区间：${gradeRank}\n`;
+    } else {
+      const { totalExams, trend, strongSubjects, weakSubjects } = analysis;
+      const trendLines = trend.length > 0
+        ? trend.map((t) => `${t.examName}(${t.examDate ? String(t.examDate).slice(0, 10) : '日期未知'})：总分${t.totalScore}，平均${t.avgScore}，科目数${t.subjectCount}`).join('\n')
+        : '暂无历次成绩数据';
+      const strongLines = strongSubjects.length > 0
+        ? strongSubjects.map((s) => `${s.subjectName}(历次平均${s.avgScore}分，共${s.examCount}次)`).join('、')
+        : '暂无';
+      const weakLines = weakSubjects.length > 0
+        ? weakSubjects.map((s) => `${s.subjectName}(历次平均${s.avgScore}分，共${s.examCount}次)`).join('、')
+        : '暂无';
+
+      dataSection =
+        `【历次考试情况】\n` +
+        `参与考试次数：${totalExams}\n` +
+        `${trendLines}\n` +
+        `优势学科：${strongLines}\n` +
+        `薄弱学科：${weakLines}\n`;
+    }
+
+    const systemPrompt =
+      '你是一位经验丰富的中学班主任兼学业规划导师，擅长基于学生成绩数据撰写个性化个人学情画像。' +
+      '你的分析温和、客观、以鼓励为主，同时直指问题并给出可执行的提升建议。' +
+      '请直接输出报告正文，使用纯文本结构化格式（小标题 + 段落），' +
+      '不要使用 Markdown 语法（不要使用 #、*、-、表格、代码块等任何标记符号），小标题直接写文字即可。';
+
+    const userMessage =
+      `请根据以下学生成绩数据，撰写一份个人学情画像。\n\n` +
+      `【学生基本信息】\n` +
+      `姓名：${name}\n` +
+      `班级：${className || '未分配'}\n` +
+      `年级：${grade || '未标注'}\n\n` +
+      `${dataSection}\n` +
+      `【报告要求】\n` +
+      `1. 全文 400-800 字，纯文本，使用小标题加段落的形式，不要使用 Markdown 表格。\n` +
+      `2. 必须包含以下部分：\n` +
+      `   一、学习特点概述：结合成绩分布与排名，概括该生的整体学习状态与特点。\n` +
+      `   二、优势学科及原因：指出优势学科，分析其可能的学习优势与原因。\n` +
+      `   三、薄弱环节：指出薄弱学科或环节，分析可能存在的知识漏洞与学习障碍。\n` +
+      `   四、成绩变化趋势解读：若有历次成绩数据，解读其成绩变化趋势与波动原因；若无，则结合本次考试排名说明其位置。\n` +
+      `   五、提升建议：给出 3-5 条具体、可执行的提升建议（如时间分配、错题整理、专项训练、心态调整等）。\n` +
+      `3. 语言要贴合学生，避免空泛套话，建议要具体可落地。`;
+
+    return [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage }
+    ];
+  }
+
+  /**
+   * 调用大模型生成文本（统一错误包装）
+   */
+  static async callDiagnosisAI(messages, maxTokens = 1500) {
+    try {
+      const content = await DeepSeekService.chat(messages, {
+        model: 'deepseek-chat',
+        temperature: 0.7,
+        maxTokens
+      });
+      return (content || '').trim();
+    } catch (error) {
+      console.error('AI 学情诊断生成失败:', error.message);
+      const apiError = new Error(`AI学情诊断生成失败：${error.message}`);
+      apiError.name = 'AIServiceError';
+      apiError.code = ErrorCode.SERVICE_UNAVAILABLE;
+      apiError.cause = error;
+      throw apiError;
+    }
+  }
+
+  /**
+   * 生成班级学情诊断报告
+   * @param {number} examId - 考试ID
+   * @param {number} classId - 班级ID
+   * @param {number} userId - 生成人ID
+   */
+  static async generateClassDiagnosis(examId, classId, userId) {
+    // 复用已有的班级学情分析（数据不存在时会抛 404，直接透传）
+    const analysis = await this.getClassAnalysis(examId, classId);
+
+    // 生成时使用的统计快照
+    const metrics = {
+      examId: analysis.exam.id,
+      examName: analysis.exam.name,
+      classId: analysis.class.id,
+      className: analysis.class.name,
+      overall: analysis.overall,
+      subjectStats: analysis.subjectStats.map((s) => ({
+        subjectId: s.subjectId,
+        subjectName: s.subjectName,
+        fullScore: s.fullScore,
+        avgScore: s.avgScore,
+        maxScore: s.maxScore,
+        minScore: s.minScore,
+        passRate: s.passRate,
+        excellentRate: s.excellentRate,
+        studentCount: s.studentCount,
+        gradeAvgScore: s.gradeAvgScore,
+        avgScoreDiff: s.avgScoreDiff
+      })),
+      weakSubjects: analysis.weakSubjects
+    };
+
+    const messages = this.buildClassDiagnosisMessages(analysis);
+    const content = await this.callDiagnosisAI(messages, 1600);
+
+    const title = `${analysis.class.name} - ${analysis.exam.name} 学情诊断报告`;
+
+    const [result] = await pool.execute(
+      `INSERT INTO ai_diagnosis_reports
+         (report_type, target_id, exam_id, title, content, metrics, generated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ['class', classId, examId, title, content, JSON.stringify(metrics), userId || null]
+    );
+
+    const reportId = result.insertId;
+    const [rows] = await pool.query(
+      'SELECT created_at FROM ai_diagnosis_reports WHERE id = ? LIMIT 1',
+      [reportId]
+    );
+
+    return {
+      reportId,
+      reportType: 'class',
+      targetId: Number(classId),
+      examId: Number(examId),
+      examName: analysis.exam.name,
+      className: analysis.class.name,
+      content,
+      metrics,
+      createdAt: rows[0] ? rows[0].created_at : new Date()
+    };
+  }
+
+  /**
+   * 生成个人学情画像
+   * @param {number} studentId - 学生ID
+   * @param {number|null} examId - 考试ID（可空，为空时基于历次成绩）
+   * @param {number} userId - 生成人ID
+   */
+  static async generateStudentDiagnosis(studentId, examId, userId) {
+    const targetExamId = examId || null;
+
+    // 查询学生基本信息（姓名、班级、年级）
+    const [studentRows] = await pool.query(
+      `SELECT u.id, u.name, c.name AS class_name, c.grade
+       FROM users u
+       LEFT JOIN classes c ON u.class_id = c.id
+       WHERE u.id = ?`,
+      [studentId]
+    );
+
+    if (!studentRows[0]) {
+      const error = new Error('学生不存在');
+      error.name = 'NotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    const student = studentRows[0];
+
+    // 复用已有的学生学情分析
+    const analysis = await this.getStudentAnalysis(studentId, targetExamId);
+
+    // 生成时使用的统计快照
+    const metrics = {
+      studentId: Number(studentId),
+      studentName: student.name,
+      className: student.class_name || null,
+      grade: student.grade || null,
+      examId: targetExamId ? Number(targetExamId) : null,
+      examName: targetExamId ? analysis.examName : null,
+      strongSubjects: analysis.strongSubjects || [],
+      weakSubjects: analysis.weakSubjects || []
+    };
+
+    const messages = this.buildStudentDiagnosisMessages(student, analysis, targetExamId);
+    const content = await this.callDiagnosisAI(messages, 1600);
+
+    const title = `${student.name} - 个人学情画像`;
+
+    const [result] = await pool.execute(
+      `INSERT INTO ai_diagnosis_reports
+         (report_type, target_id, exam_id, title, content, metrics, generated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ['student', studentId, targetExamId, title, content, JSON.stringify(metrics), userId || null]
+    );
+
+    const reportId = result.insertId;
+    const [rows] = await pool.query(
+      'SELECT created_at FROM ai_diagnosis_reports WHERE id = ? LIMIT 1',
+      [reportId]
+    );
+
+    return {
+      reportId,
+      reportType: 'student',
+      targetId: Number(studentId),
+      studentId: Number(studentId),
+      studentName: student.name,
+      examId: targetExamId ? Number(targetExamId) : null,
+      content,
+      metrics,
+      createdAt: rows[0] ? rows[0].created_at : new Date()
+    };
+  }
+
+  /**
+   * 查询诊断历史记录
+   * @param {string} reportType - class | student
+   * @param {number} targetId - 班级ID 或 学生ID
+   * @param {number} limit - 返回条数，默认 10
+   */
+  static async getDiagnosisHistory(reportType, targetId, limit = 10) {
+    const parsedLimit = Number(limit);
+    const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(Math.floor(parsedLimit), 100)
+      : 10;
+
+    // LIMIT 使用内联整数（mysql2 execute 不支持 LIMIT 占位符）
+    const [rows] = await pool.query(
+      `SELECT id, report_type, target_id, exam_id, title, content, created_at
+       FROM ai_diagnosis_reports
+       WHERE report_type = ? AND target_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ${safeLimit}`,
+      [reportType, targetId]
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      reportType: r.report_type,
+      targetId: r.target_id,
+      examId: r.exam_id,
+      title: r.title,
+      content: r.content,
+      createdAt: r.created_at
+    }));
+  }
+
+  /**
+   * 查询单条诊断报告详情
+   * @param {number} id - 报告ID
+   */
+  static async getDiagnosisDetail(id) {
+    const [rows] = await pool.query(
+      `SELECT id, report_type, target_id, exam_id, title, content, metrics, generated_by, created_at
+       FROM ai_diagnosis_reports
+       WHERE id = ?
+       LIMIT 1`,
+      [id]
+    );
+
+    if (!rows[0]) {
+      const error = new Error('诊断报告不存在');
+      error.name = 'NotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    const r = rows[0];
+    return {
+      id: r.id,
+      reportType: r.report_type,
+      targetId: r.target_id,
+      examId: r.exam_id,
+      title: r.title,
+      content: r.content,
+      metrics: r.metrics,
+      generatedBy: r.generated_by,
+      createdAt: r.created_at
     };
   }
 

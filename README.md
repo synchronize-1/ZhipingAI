@@ -96,8 +96,9 @@ cp .env.example .env
 ```bash
 cd backend-api
 npm run init:db          # 创建所有表 + 管理员账号
-node src/migrations/index.js     # 执行迁移（核心表）
-node src/migrations/seed/seed_core_data.js  # 插入种子数据
+npm run migrate          # 执行迁移（核心表 + 字段补充）
+npm run seed:core        # 插入基础数据（学科/班级/考试）
+npm run seed:users       # 生成测试账号（教师 + 学生）
 ```
 
 5. **启动服务**
@@ -117,9 +118,16 @@ cd ../frontend-web-admin && npm run dev  # → http://localhost:5173
 
 ### 测试账号
 
-| 角色 | 用户名 | 密码 |
-|------|--------|------|
-| 管理员 | admin | admin123 |
+执行 `npm run seed:users` 可生成完整测试账号（统一密码 `123456`）：
+
+| 角色 | 账号 | 密码 | 说明 |
+|------|------|------|------|
+| 管理员 | admin | admin123 | 系统管理员 |
+| 教师 | teacher1 ~ teacher8 | 123456 | 张教授/李教授/王老师等，工号 T2024001~T2024008 |
+| 学生 | student1 / student2 | 123456 | 高一(1)班，学号 20240101 / 20240102 |
+| 学生 | 20240103 ~ 20240510 | 123456 | 用户名即学号，5 个班级各 10 人 |
+
+> 学生账号也可直接用学号登录（如 `20240103`）。
 
 ## 核心功能模块
 

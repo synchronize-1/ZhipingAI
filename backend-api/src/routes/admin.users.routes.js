@@ -36,7 +36,20 @@ router.get('/', verifyToken, checkRole('admin'), asyncHandler(async (req, res) =
   paginate(res, result.list, result.total, result.page, result.pageSize);
 }));
 
-// ==================== 2. 用户详情 ====================
+// ==================== 2. 下载导入模板（必须在 /:id 之前注册） ====================
+router.get('/template', verifyToken, checkRole('admin'), asyncHandler(async (req, res) => {
+  const { role } = req.query;
+  const { buffer, fileName } = await UserService.generateImportTemplate(role);
+
+  const encodedFileName = encodeURIComponent(fileName);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`);
+  res.setHeader('Content-Length', buffer.length);
+
+  res.send(buffer);
+}));
+
+// ==================== 3. 用户详情 ====================
 router.get('/:id', verifyToken, checkRole('admin'), asyncHandler(async (req, res) => {
   const user = await UserService.getUserDetail(req.params.id);
   success(res, user);

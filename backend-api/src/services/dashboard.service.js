@@ -146,7 +146,8 @@ class DashboardService {
         e.name,
         e.exam_date as examDate,
         e.exam_type as examType,
-        e.status
+        e.status,
+        e.created_at
       FROM exams e
       INNER JOIN exam_scores es ON es.exam_id = e.id
       WHERE es.class_id IN (${classIdsStr})
@@ -159,7 +160,7 @@ class DashboardService {
     if (classIds.length > 0) {
       // 先找到最近一次考试
       const [latestExamRows] = await pool.query(`
-        SELECT DISTINCT e.id as examId, e.name as examName, e.exam_date as examDate
+        SELECT DISTINCT e.id as examId, e.name as examName, e.exam_date as examDate, e.created_at
         FROM exams e
         INNER JOIN exam_scores es ON es.exam_id = e.id
         WHERE es.class_id IN (${classIdsStr})

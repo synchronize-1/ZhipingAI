@@ -1,10 +1,23 @@
 <template>
-  <div class="portfolio-overview">
+  <div class="portfolio-overview" :class="{ 'pdf-exporting': exporting }">
     <PageHeader
       title="成长档案总览"
       description="查看学生成长档案的综合数据概览"
       :breadcrumbs="breadcrumbs"
-    />
+    >
+      <template #extra>
+        <el-button
+          class="export-pdf-btn"
+          type="primary"
+          :icon="Download"
+          :loading="exporting"
+          :disabled="!canExport"
+          @click="handleExportPdf"
+        >
+          {{ exporting ? '导出中…' : '导出PDF' }}
+        </el-button>
+      </template>
+    </PageHeader>
 
     <!-- 学生选择器（教师/管理员可见） -->
     <el-card v-if="!isStudentRole" shadow="never" class="student-select-card">
@@ -45,7 +58,12 @@
       </el-form>
     </el-card>
 
-    <div v-loading="loading" class="overview-content">
+    <div
+      v-loading="loading"
+      ref="exportContentRef"
+      class="overview-content"
+      :class="{ 'pdf-exporting': exporting }"
+    >
       <!-- 学生基本信息卡片 -->
       <el-card shadow="never" class="student-info-card">
         <div class="student-info">
@@ -255,11 +273,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Star, Trophy, Avatar, Document, CircleCheck, EditPen } from '@element-plus/icons-vue'
+import { Star, Trophy, Avatar, Document, CircleCheck, EditPen, Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { portfolioAPI, skillAPI, honorAPI, mentalHealthAPI, commentAPI } from '@/api/portfolio'
 import { useECharts } from '@/composables/useECharts'
+import { exportElementToPdf } from '@/utils/exportPdf'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 defineOptions({ name: 'PortfolioOverview' })
@@ -298,6 +317,12 @@ const studentInfo = ref({})
 const overviewData = ref({})
 const latestMentalHealth = ref({})
 const latestComment = ref({})
+
+// 导出 PDF 相关
+const exportContentRef = ref(null)
+const exporting = ref(false)
+// 有学生信息且不在加载中才允许导出
+const canExport = computed(() => !loading.value && !!studentInfo.value?.name)
 
 // 图表 refs
 const skillChartRef = ref(null)
@@ -725,6 +750,40 @@ const goToComments = () => {
   router.push({ path: '/portfolio/comments', query: { studentId: currentStudentId.value } })
 }
 
+// 导出当前学生的成长档案 PDF
+const handleExportPdf = async () => {
+  const container = exportContentRef.value
+  if (!container) {
+    ElMessage.error('导出失败：未找到导出内容')
+    return
+  }
+  if (exporting.value) return
+
+  exporting.value = true
+  // 导出期间隐藏按钮等非内容元素，避免干扰截图
+  container.classList.add('pdf-exporting')
+  try {
+    await nextTick()
+    const name = studentInfo.value?.name || '学生'
+    const studentNo = studentInfo.value?.studentNo || ''
+    const className = studentInfo.value?.className || ''
+    const fileName = `成长档案_${name}${studentNo ? `_${studentNo}` : ''}`
+    const subtitleParts = [className, studentNo ? `学号：${studentNo}` : ''].filter(Boolean)
+
+    await exportElementToPdf(container, fileName, {
+      title: '学生成长档案',
+      subtitle: subtitleParts.join('    ')
+    })
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出 PDF 失败:', error)
+    ElMessage.error(error?.message || '导出失败，请重试')
+  } finally {
+    container.classList.remove('pdf-exporting')
+    exporting.value = false
+  }
+}
+
 onMounted(() => {
   if (isStudentRole.value) {
     loadOverviewData()
@@ -739,11 +798,24 @@ onMounted(() => {
 .portfolio-overview {
   padding: 20px;
 
+  // 导出 PDF 期间：隐藏「导出PDF」按钮本身，避免被截入图片
+  &.pdf-exporting {
+    .export-pdf-btn {
+      visibility: hidden;
+    }
+  }
+
   .student-select-card {
     margin-bottom: 16px;
   }
 
   .overview-content {
+    // 导出 PDF 期间：隐藏卡片内的文字按钮（查看详情/查看全部）等非内容元素
+    &.pdf-exporting {
+      :deep(.card-header .el-button) {
+        display: none;
+      }
+    }
     .student-info-card {
       margin-bottom: 16px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
