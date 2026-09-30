@@ -64,18 +64,36 @@ const routes = [
                 component: () => import('@/views/Courses.vue'),
                 meta: { title: '我的课程', icon: 'Reading', roles: ['student'] }
             },
-            // {
-            //     path: 'schedule',
-            //     name: 'Schedule',
-            //     component: () => import('@/views/Schedule.vue'),
-            //     meta: { title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] }
-            // },
-            // {
-            //     path: 'my-schedule',
-            //     name: 'MySchedule',
-            //     component: () => import('@/views/Schedule.vue'),
-            //     meta: { title: '我的课表', icon: 'Calendar', roles: ['student'] }
-            // },
+            {
+                path: 'teaching/timetable',
+                name: 'TeachingTimetable',
+                component: () => import('@/views/teaching/Timetable.vue'),
+                meta: { title: '课表管理', icon: 'Calendar', roles: ['admin'] }
+            },
+            {
+                path: 'timetable/my',
+                name: 'MyTimetable',
+                component: () => import('@/views/teaching/Timetable.vue'),
+                meta: { title: '我的课表', icon: 'Calendar', roles: ['teacher', 'student'] }
+            },
+            {
+                path: 'activities',
+                name: 'ActivityCenter',
+                component: () => import('@/views/activity/ActivityCenter.vue'),
+                meta: { title: '校园活动', icon: 'Flag', roles: ['admin', 'teacher', 'student'] }
+            },
+            {
+                path: 'elective/manage',
+                name: 'ElectiveManage',
+                component: () => import('@/views/elective/ElectiveManage.vue'),
+                meta: { title: '选修课管理', icon: 'Notebook', roles: ['admin', 'teacher'] }
+            },
+            {
+                path: 'elective/select',
+                name: 'ElectiveSelect',
+                component: () => import('@/views/elective/ElectiveSelect.vue'),
+                meta: { title: '选课中心', icon: 'Notebook', roles: ['student'] }
+            },
             // {
             //     path: 'services',
             //     name: 'Services',
@@ -105,42 +123,6 @@ const routes = [
                 name: 'Profile',
                 component: () => import('@/views/Profile.vue'),
                 meta: { title: '个人设置', icon: 'Setting' }
-            },
-            {
-                path: 'ai-science',
-                name: 'AIScience',
-                component: () => import('@/views/AIScience.vue'),
-                meta: { title: 'AI科普乐园', icon: 'MagicStick' }
-            },
-            {
-                path: 'ai-learning',
-                name: 'AILearning',
-                component: () => import('@/views/AILearning.vue'),
-                meta: { title: 'AI学习助手', icon: 'Reading', roles: ['student'] }
-            },
-            {
-                path: 'ai-writing',
-                name: 'AIWriting',
-                component: () => import('@/views/AIWriting.vue'),
-                meta: { title: 'AI写作助手', icon: 'EditPen', roles: ['student'] }
-            },
-            {
-                path: 'ai-ocr',
-                name: 'AIOCR',
-                component: () => import('@/views/AIOCR.vue'),
-                meta: { title: 'AI智能识别', icon: 'Camera', roles: ['student'] }
-            },
-            {
-                path: 'ai-creative',
-                name: 'AICreative',
-                component: () => import('@/views/AICreative.vue'),
-                meta: { title: 'AI创意工具', icon: 'Picture', roles: ['student'] }
-            },
-            {
-                path: 'ai-sentiment',
-                name: 'AISentiment',
-                component: () => import('@/views/AISentiment.vue'),
-                meta: { title: 'AI情感分析', icon: 'Sunny', roles: ['student'] }
             },
             // ===== 教学质量评估模块 =====
             {

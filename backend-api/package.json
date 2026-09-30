@@ -8,10 +8,16 @@
     "start": "node src/app.js",
     "init:db": "node src/scripts/initDatabase.js",
     "migrate": "node src/migrations/index.js",
-    "seed:core": "node src/migrations/seed/seed_core_data.js",
-    "seed:users": "node src/migrations/seed/seed_test_users.js",
-    "seed:scores": "node src/migrations/seed/seed_test_scores.js",
-    "test": "jest --runInBand"
+    "migrate:status": "node src/migrations/index.js status",
+    "migrate:down": "node src/migrations/index.js down",
+    "seed:core": "node src/migrations/runSql.js src/migrations/seed/seed_core_data.sql",
+    "seed:users": "node src/migrations/runSql.js src/migrations/seed/seed_test_users.sql",
+    "seed:scores": "node src/migrations/runSql.js src/migrations/seed/seed_test_scores.sql",
+    "seed:timetable": "node src/migrations/runSql.js src/migrations/seed/seed_test_timetable.sql",
+    "seed:activities": "node src/migrations/runSql.js src/migrations/seed/seed_test_activities.sql",
+    "seed:electives": "node src/migrations/runSql.js src/migrations/seed/seed_test_electives.sql",
+    "seed": "npm run seed:core && npm run seed:users && npm run seed:scores && npm run seed:timetable && npm run seed:activities && npm run seed:electives",
+    "sql": "node src/migrations/runSql.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
@@ -29,8 +35,6 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "jest": "^30.3.0",
-    "nodemon": "^3.0.2",
-    "supertest": "^7.2.2"
+    "nodemon": "^3.0.2"
   }
 }

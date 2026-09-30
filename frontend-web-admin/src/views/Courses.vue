@@ -186,7 +186,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Plus, User, Location } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import api from '@/api'
+import { courseAPI } from '@/api/courses'
 import CourseInteraction from '@/components/CourseInteraction.vue'
 import LearningResources from '@/components/LearningResources.vue'
 
@@ -252,7 +252,7 @@ const filteredCourses = computed(() => {
 const fetchSemesters = async () => {
   loadingSemesters.value = true
   try {
-    const res = await api.courses.getSemesters()
+    const res = await courseAPI.semesters()
     if (res.success) {
       semesterList.value = res.data || []
       if (semesterList.value.length > 0 && !courseForm.value.semester) {
@@ -270,7 +270,7 @@ const fetchSemesters = async () => {
 const fetchTeachers = async () => {
   loadingTeachers.value = true
   try {
-    const res = await api.courses.getTeachers()
+    const res = await courseAPI.teachers()
     if (res.success) {
       teacherList.value = res.data || []
     }
@@ -285,7 +285,7 @@ const fetchTeachers = async () => {
 const fetchCourses = async () => {
   loading.value = true
   try {
-    const res = await api.courses.list({ limit: 100 })
+    const res = await courseAPI.list({ limit: 100 })
     if (res.success) {
       courses.value = res.data.data || []
     }
@@ -325,7 +325,7 @@ const deleteCourse = async (course) => {
         }
     )
     // 调用删除接口（如果后端有实现）
-    // await api.courses.delete(course.id)
+    // await courseAPI.remove(course.id)
     courses.value = courses.value.filter(c => c.id !== course.id)
     ElMessage.success(`课程「${course.name}」已删除`)
   } catch (error) {
@@ -366,7 +366,7 @@ const submitForm = async () => {
     try {
       if (editingCourse.value) {
         // 编辑课程
-        // await api.courses.update(editingCourse.value.id, courseForm.value)
+        // await courseAPI.update(editingCourse.value.id, courseForm.value)
         const idx = courses.value.findIndex(c => c.id === editingCourse.value.id)
         if (idx !== -1) {
           courses.value[idx] = {
@@ -383,7 +383,7 @@ const submitForm = async () => {
         ElMessage.success('课程更新成功')
       } else {
         // 创建课程
-        await api.courses.create({
+        await courseAPI.create({
           name: courseForm.value.name,
           code: courseForm.value.code,
           teacher_name: courseForm.value.teacherName,

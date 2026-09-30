@@ -16,7 +16,8 @@ class DashboardService {
         (SELECT COUNT(*) FROM users WHERE role = 'teacher') as teacherCount,
         (SELECT COUNT(*) FROM classes) as classCount,
         (SELECT COUNT(*) FROM exams) as examCount,
-        (SELECT COUNT(*) FROM subjects) as subjectCount
+        (SELECT COUNT(*) FROM subjects) as subjectCount,
+        (SELECT COUNT(*) FROM courses) as totalCourses
     `);
     const stats = statsRows[0];
 
@@ -62,6 +63,9 @@ class DashboardService {
       LIMIT 5
     `);
 
+    // 5. AI 使用统计（依赖 ai_* 表，缺失时降级）
+    const aiStats = await DashboardService.getAdminAiStats(stats.studentCount || 0);
+
     return {
       stats: {
         totalUsers: stats.totalUsers || 0,
@@ -69,13 +73,51 @@ class DashboardService {
         teacherCount: stats.teacherCount || 0,
         classCount: stats.classCount || 0,
         examCount: stats.examCount || 0,
-        subjectCount: stats.subjectCount || 0
+        subjectCount: stats.subjectCount || 0,
+        totalCourses: stats.totalCourses || 0
       },
+      aiStats,
       recentExams: recentExams || [],
       classStats: classStats || [],
       recentNotifications: recentNotifications || [],
       quickActions: []
     };
+  }
+
+  /**
+   * AI 使用统计。依赖 ai_usage_logs / ai_survey_responses，表缺失或查询失败时降级返回零值，
+   * 保证首页聚合接口在未部署 AI 数据表的环境下仍可用。
+   */
+  static async getAdminAiStats(studentCount = 0) {
+    const fallback = { activeToday: 0, coverageRate: 0, usageHoursWeekly: 0, warningCount: 0, avgDependenceScore: 0 };
+    try {
+      const [activeRows] = await pool.query(`
+        SELECT COUNT(DISTINCT user_id) as activeToday
+        FROM ai_usage_logs
+        WHERE session_date = CURDATE()
+      `);
+      const [weeklyRows] = await pool.query(`
+        SELECT SUM(session_length_min) / 60 as weeklyHours
+        FROM ai_usage_logs
+        WHERE session_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      `);
+      const [warningRows] = await pool.query(`
+        SELECT COUNT(*) as warningCount, AVG(dependence_score) as avgDependenceScore
+        FROM ai_survey_responses
+        WHERE dependence_level IN ('中度', '重度')
+      `);
+
+      const activeToday = activeRows[0]?.activeToday || 0;
+      return {
+        activeToday,
+        coverageRate: studentCount > 0 ? Math.round((activeToday / studentCount) * 1000) / 10 : 0,
+        usageHoursWeekly: Math.round(weeklyRows[0]?.weeklyHours || 0),
+        warningCount: warningRows[0]?.warningCount || 0,
+        avgDependenceScore: Math.round(warningRows[0]?.avgDependenceScore || 0)
+      };
+    } catch (e) {
+      return fallback;
+    }
   }
 
   // ==================== 教师首页 ====================

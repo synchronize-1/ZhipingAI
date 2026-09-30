@@ -55,6 +55,9 @@ export const analysisAPI = {
   classAnalysis: (examId, classId) => request.get(`/teaching/analysis/class/${examId}/${classId}`),
   gradeAnalysis: (examId) => request.get(`/teaching/analysis/grade/${examId}`),
   studentAnalysis: (studentId) => request.get(`/teaching/analysis/student/${studentId}`),
+  // 进步/退步学生识别（baseExamId 为空时自动对比上一场考试）
+  progressComparison: (examId, classId, params = {}) =>
+    request.get(`/teaching/analysis/progress/${examId}/${classId}`, { params }),
   // AI 诊断（调用大模型，耗时较长，单独放宽超时时间）
   classDiagnosis: (examId, classId) =>
     request.post('/teaching/analysis/class/diagnosis', { examId, classId }, { timeout: 120000 }),

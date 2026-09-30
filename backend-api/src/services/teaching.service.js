@@ -6,6 +6,7 @@ const Class = require('../models/Class.model');
 const User = require('../models/User');
 const ExamScore = require('../models/ExamScore.model');
 const DeepSeekService = require('./deepseek.service');
+const NotificationService = require('./notification.service');
 const { ErrorCode } = require('../utils/response');
 
 class TeachingService {
@@ -145,6 +146,30 @@ class TeachingService {
     }
 
     return { affectedRows, subjectCount: subjectIds.length };
+  }
+
+  // 成绩发布后向该班级学生推送通知；通知失败不阻断导入主流程
+  static async notifyScorePublished(examId, classId, createdBy) {
+    if (!classId) return;
+
+    const exam = await Exam.findById(examId);
+    const [students] = await pool.execute(
+      "SELECT id FROM users WHERE role = 'student' AND class_id = ?",
+      [classId]
+    );
+    if (students.length === 0) return;
+
+    const title = '成绩已发布';
+    const content = `《${exam?.name || '考试'}》成绩已发布，可在成绩查询中查看。`;
+    await Promise.allSettled(
+      students.map(s => NotificationService.create({
+        title,
+        content,
+        type: 'course',
+        userId: s.id,
+        createdBy
+      }))
+    );
   }
 
   // ==================== Excel 成绩导入预览 ====================
@@ -830,11 +855,28 @@ class TeachingService {
       }));
     }
 
+    // 班级学生总分排名（用于"班级排名前10"展示）
+    const classScores = await ExamScore.getByExamAndClass(examId, classId, null);
+    const studentScoreMap = this._aggregateStudentScores(classScores);
+    const totalRankMap = this._rankByTotal(studentScoreMap);
+    const studentRankings = Object.values(studentScoreMap)
+      .filter((s) => s.count > 0)
+      .map((s) => ({
+        studentId: s.studentId,
+        studentName: s.studentName,
+        studentNo: s.studentNo,
+        totalScore: parseFloat(s.total.toFixed(2)),
+        avgScore: parseFloat((s.total / s.count).toFixed(2)),
+        classRank: totalRankMap[String(s.studentId)] || null
+      }))
+      .sort((a, b) => (a.classRank || 0) - (b.classRank || 0));
+
     return {
       exam: { id: exam.id, name: exam.name, examType: exam.exam_type, grade: exam.grade },
       class: { id: cls.id, name: cls.name, grade: cls.grade },
       subjectStats,
       topStudents,
+      studentRankings,
       weakSubjects,
       overall: {
         subjectCount: subjectStats.length,
@@ -1108,6 +1150,216 @@ class TeachingService {
       strongSubjects,
       weakSubjects
     };
+  }
+
+  // ==================== 进步/退步学生识别 ====================
+
+  /**
+   * 对比两次考试，识别进步 / 退步学生
+   * @param {number} examId - 当前考试ID
+   * @param {number} classId - 班级ID
+   * @param {number|null} baseExamId - 对比基准考试ID（为空时自动取该班级上一场有成绩的考试）
+   * @param {number|null} subjectId - 指定科目（为空时按总分对比）
+   * @param {number} limit - 进步/退步榜单返回条数
+   */
+  static async getProgressComparison(examId, classId, baseExamId = null, subjectId = null, limit = 10) {
+    const exam = await Exam.findById(examId);
+    if (!exam) {
+      const error = new Error('考试不存在');
+      error.name = 'NotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    const cls = await Class.findById(classId);
+    if (!cls) {
+      const error = new Error('班级不存在');
+      error.name = 'NotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    const parsedLimit = Number(limit);
+    const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(Math.floor(parsedLimit), 50)
+      : 10;
+
+    // 校验可选科目
+    let subject = null;
+    if (subjectId) {
+      subject = await Subject.findById(subjectId);
+      if (!subject) {
+        const error = new Error('学科不存在');
+        error.name = 'NotFoundError';
+        error.status = 404;
+        throw error;
+      }
+    }
+
+    // 确定基准考试
+    let baseExam = null;
+    if (baseExamId) {
+      if (String(baseExamId) === String(examId)) {
+        const error = new Error('对比考试不能与当前考试相同');
+        error.name = 'ValidationError';
+        error.code = ErrorCode.PARAM_VALIDATION;
+        throw error;
+      }
+      baseExam = await Exam.findById(baseExamId);
+      if (!baseExam) {
+        const error = new Error('对比基准考试不存在');
+        error.name = 'NotFoundError';
+        error.status = 404;
+        throw error;
+      }
+    } else {
+      // 默认取该班级上一场有成绩的考试
+      const examList = await Exam.getExamsWithScoresForClass(classId);
+      const idx = examList.findIndex((e) => String(e.id) === String(examId));
+      if (idx >= 0 && idx + 1 < examList.length) {
+        baseExam = examList[idx + 1];
+      }
+    }
+
+    const examMeta = {
+      id: exam.id,
+      name: exam.name,
+      examDate: exam.exam_date,
+      examType: exam.exam_type
+    };
+
+    if (!baseExam) {
+      return {
+        exam: examMeta,
+        baseExam: null,
+        subject: subject ? { id: subject.id, name: subject.name } : null,
+        hasComparison: false,
+        summary: null,
+        progressTop: [],
+        declineTop: [],
+        students: []
+      };
+    }
+
+    const [currentRows, baseRows] = await Promise.all([
+      ExamScore.getByExamAndClass(examId, classId, subjectId || null),
+      ExamScore.getByExamAndClass(baseExam.id, classId, subjectId || null)
+    ]);
+
+    const currentMap = this._aggregateStudentScores(currentRows);
+    const baseMap = this._aggregateStudentScores(baseRows);
+
+    // 两次考试分别按总分计算班级排名
+    const currentRanks = this._rankByTotal(currentMap);
+    const baseRanks = this._rankByTotal(baseMap);
+
+    const students = [];
+    for (const studentId of Object.keys(currentMap)) {
+      // 仅对比两次考试都参加的学生
+      if (!baseMap[studentId]) continue;
+
+      const cur = currentMap[studentId];
+      const base = baseMap[studentId];
+
+      const delta = parseFloat((cur.total - base.total).toFixed(2));
+      const baseRank = baseRanks[studentId] ?? null;
+      const currentRank = currentRanks[studentId] ?? null;
+
+      students.push({
+        studentId: Number(studentId),
+        studentName: cur.studentName,
+        studentNo: cur.studentNo,
+        baseScore: parseFloat(base.total.toFixed(2)),
+        currentScore: parseFloat(cur.total.toFixed(2)),
+        delta,
+        baseRank,
+        currentRank,
+        rankDelta: baseRank !== null && currentRank !== null ? baseRank - currentRank : null,
+        level: delta > 0 ? 'progress' : (delta < 0 ? 'decline' : 'stable')
+      });
+    }
+
+    // 按分差降序：进步榜取头部，退步榜取尾部并反转
+    students.sort((a, b) => b.delta - a.delta);
+
+    const progressTop = students.filter((s) => s.delta > 0).slice(0, safeLimit);
+    const declineTop = students.filter((s) => s.delta < 0).slice(-safeLimit).reverse();
+
+    const progressCount = students.filter((s) => s.delta > 0).length;
+    const declineCount = students.filter((s) => s.delta < 0).length;
+
+    return {
+      exam: examMeta,
+      baseExam: {
+        id: baseExam.id,
+        name: baseExam.name,
+        examDate: baseExam.exam_date,
+        examType: baseExam.exam_type
+      },
+      subject: subject ? { id: subject.id, name: subject.name } : null,
+      hasComparison: true,
+      summary: {
+        comparedCount: students.length,
+        progressCount,
+        declineCount,
+        stableCount: students.length - progressCount - declineCount,
+        avgDelta: students.length > 0
+          ? parseFloat((students.reduce((sum, s) => sum + s.delta, 0) / students.length).toFixed(2))
+          : 0,
+        maxProgress: progressTop.length > 0 ? progressTop[0].delta : 0,
+        maxDecline: declineTop.length > 0 ? declineTop[0].delta : 0
+      },
+      progressTop,
+      declineTop,
+      students
+    };
+  }
+
+  // 将成绩行按学生聚合为总分（缺考科目不计入）
+  static _aggregateStudentScores(rows) {
+    const map = {};
+    for (const r of rows) {
+      const key = String(r.student_id);
+      if (!map[key]) {
+        map[key] = {
+          studentId: r.student_id,
+          studentName: r.student_name,
+          studentNo: r.student_no,
+          total: 0,
+          count: 0,
+          absent: 0
+        };
+      }
+      const item = map[key];
+      if (r.is_absent) {
+        item.absent++;
+        continue;
+      }
+      if (r.score !== null && r.score !== undefined) {
+        item.total += Number(r.score);
+        item.count++;
+      }
+    }
+    return map;
+  }
+
+  // 按总分降序计算班级排名（同分并列）
+  static _rankByTotal(map) {
+    const list = Object.values(map)
+      .filter((s) => s.count > 0)
+      .sort((a, b) => b.total - a.total);
+
+    const ranks = {};
+    let prevTotal = null;
+    let rank = 0;
+    list.forEach((s, i) => {
+      if (prevTotal === null || s.total !== prevTotal) {
+        rank = i + 1;
+        prevTotal = s.total;
+      }
+      ranks[String(s.studentId)] = rank;
+    });
+    return ranks;
   }
 
   // ==================== AI 学情诊断 ====================

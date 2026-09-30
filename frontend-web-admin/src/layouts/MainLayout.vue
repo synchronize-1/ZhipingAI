@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
     <!-- 侧边栏 - 渐变紫蓝色主题 -->
     <aside
         class="fixed left-0 top-0 h-full w-64 sidebar-gradient text-white z-50 transition-all duration-300"
@@ -26,7 +26,7 @@
             :class="isActive(item.path) ? 'nav-item-active' : 'nav-item-normal'"
         >
           <el-icon :size="20"><component :is="item.icon" /></el-icon>
-          <span>{{ item.title }}</span>
+          <span>{{ item.titleKey ? t(item.titleKey) : item.title }}</span>
           <span v-if="isActive(item.path)" class="nav-indicator"></span>
         </router-link>
       </nav>
@@ -46,10 +46,10 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="$router.push('/profile')">
-                  <el-icon><User /></el-icon>个人设置
+                  <el-icon><User /></el-icon>{{ t('nav.profile') }}
                 </el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout">
-                  <el-icon><SwitchButton /></el-icon>退出登录
+                  <el-icon><SwitchButton /></el-icon>{{ t('shell.logout') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -58,23 +58,50 @@
       </div>
     </aside>
 
+    <!-- 移动端遮罩：侧栏展开时覆盖内容区，点击关闭 -->
+    <div
+      v-if="isCompact && sidebarOpen"
+      class="sidebar-backdrop"
+      @click="sidebarOpen = false"
+    />
+
     <!-- 主内容区 -->
-    <main class="ml-64 min-h-screen transition-all duration-300" :class="{ 'ml-0': !sidebarOpen }">
+    <main class="min-h-screen transition-all duration-300" :class="mainClass">
       <!-- 顶部导航栏 - 炫酷渐变版 -->
       <header class="top-navbar-cool sticky top-0 z-40">
         <div class="navbar-container flex items-center justify-between px-4 py-1.5">
-          <!-- 左侧：折叠按钮 -->
-          <div class="flex items-center gap-4">
+          <!-- 左侧：折叠按钮 + 全局搜索 -->
+          <div class="flex items-center gap-3">
             <el-button
                 :icon="sidebarOpen ? 'Fold' : 'Expand'"
                 circle
-                class="toggle-btn-cool"
+                class="icon-btn-cool"
                 @click="sidebarOpen = !sidebarOpen"
             />
+            <el-autocomplete
+              v-model="searchKeyword"
+              :fetch-suggestions="querySearch"
+              :placeholder="t('shell.searchPlaceholder')"
+              :trigger-on-focus="false"
+              clearable
+              class="global-search"
+              @select="handleSearchSelect"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+              <template #default="{ item }">
+                <div class="search-suggestion">
+                  <el-icon class="suggestion-icon"><component :is="item.icon" /></el-icon>
+                  <span class="suggestion-title">{{ item.title }}</span>
+                  <span class="suggestion-path">{{ item.path }}</span>
+                </div>
+              </template>
+            </el-autocomplete>
           </div>
 
-          <!-- 中间：时间/天气/状态模块 - 放大居中 -->
-          <div class="flex items-center gap-6">
+          <!-- 中间：时间/天气/状态模块 - 放大居中（平板及以下隐藏，避免拥挤） -->
+          <div class="hidden md:flex items-center gap-6">
             <!-- 炫酷时间模块 -->
             <div class="time-card-cool" @click="toggleTimeFormat">
               <div class="time-date">{{ currentDate }}</div>
@@ -128,8 +155,32 @@
 
           </div>
 
-          <!-- 右侧：通知和全屏 -->
+          <!-- 右侧：语言 / 主题 / 通知和全屏 -->
           <div class="flex items-center gap-3">
+            <el-dropdown trigger="click" @command="setLocale">
+              <el-button circle class="icon-btn-cool lang-btn" :title="t('shell.language')">
+                {{ localeShort }}
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item
+                    v-for="lang in languages"
+                    :key="lang.value"
+                    :command="lang.value"
+                    :disabled="locale === lang.value"
+                  >
+                    {{ lang.label }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button
+              :icon="themeStore.isDark ? Sunny : Moon"
+              circle
+              class="icon-btn-cool"
+              :title="themeStore.isDark ? t('shell.themeLight') : t('shell.themeDark')"
+              @click="themeStore.toggle()"
+            />
             <el-badge :value="unreadCount" :hidden="!unreadCount">
               <el-button :icon="Bell" circle class="icon-btn-cool" @click="$router.push('/notifications')" />
             </el-badge>
@@ -139,10 +190,10 @@
       </header>
 
       <!-- 页面内容 -->
-      <div class="p-6">
+      <div class="p-3 md:p-6">
         <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'Growth', 'Notifications']">
+            <keep-alive :include="['Dashboard', 'Home', 'Users', 'Courses', 'Schedule', 'Rooms', 'Attendance', 'Services', 'Activities', 'ActivityCenter', 'Growth', 'Notifications']">
               <component :is="Component" :key="route.path" />
             </keep-alive>
           </transition>
@@ -156,18 +207,26 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Bell, FullScreen, School, MoreFilled, SwitchButton, Sunny, Cloudy, Drizzling, WindPower, View, User, OfficeBuilding, Bowl, Reading } from '@element-plus/icons-vue'
-import api from '@/api'
+import { useThemeStore } from '@/stores/theme'
+import { useResponsive } from '@/composables/useResponsive'
+import { useI18n } from '@/i18n'
+import { Bell, FullScreen, School, MoreFilled, SwitchButton, Sunny, Moon, Cloudy, Drizzling, WindPower, View, User, OfficeBuilding, Bowl, Reading, Search } from '@element-plus/icons-vue'
+import { socialAPI } from '@/api/social'
+import { notificationAPI } from '@/api/notifications'
 import AIAssistant from '@/components/AIAssistant.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 
-const sidebarOpen = ref(true)
+const { isCompact } = useResponsive()
+const { t, locale, setLocale, languages } = useI18n()
+
+const sidebarOpen = ref(!isCompact.value)
 const unreadCount = ref(0)
 const greeting = ref('')
 const currentDate = ref('')
@@ -227,46 +286,75 @@ const campusRealtime = ref({
   libraryCount: 328
 })
 
-const menuItems = computed(() => {
-  const role = userStore.user?.role || 'student'
-
-  // 所有菜单项定义，包含角色权限
-  const allMenus = [
-    { path: '/', title: '数据大屏', icon: 'DataAnalysis', roles: ['admin'] },
-    { path: '/home', title: '首页', icon: 'HomeFilled', roles: ['student', 'teacher', 'admin'] },
+// 所有菜单项定义，包含角色权限（titleKey 用于国际化）
+const allMenus = [
+    { path: '/', title: '数据大屏', titleKey: 'nav.dashboard', icon: 'DataAnalysis', roles: ['admin'] },
+    { path: '/home', title: '首页', titleKey: 'nav.home', icon: 'HomeFilled', roles: ['student', 'teacher', 'admin'] },
     // { path: '/admin-health', title: 'AI健康评估', icon: 'DataAnalysis', roles: ['admin'] },
-    { path: '/ai-science', title: '科普实战乐园', icon: 'MagicStick', roles: ['student', 'teacher', 'admin'] },
-    { path: '/users', title: '用户管理', icon: 'User', roles: ['admin'] },
-    { path: '/courses', title: '课程管理', icon: 'Reading', roles: ['teacher', 'admin'] },
+    { path: '/users', title: '用户管理', titleKey: 'nav.users', icon: 'User', roles: ['admin'] },
+    { path: '/courses', title: '课程管理', titleKey: 'nav.courses', icon: 'Reading', roles: ['teacher', 'admin'] },
     // { path: '/my-courses', title: '我的课程', icon: 'Reading', roles: ['student'] },
-    // { path: '/schedule', title: '课表管理', icon: 'Calendar', roles: ['teacher', 'admin'] },   //管理员：课程管理
-    // { path: '/my-schedule', title: '我的课表', icon: 'Calendar', roles: ['student'] },         //学生：我的课表
-    // { path: '/rooms', title: '教室管理', icon: 'OfficeBuilding', roles: ['admin'] },
+    { path: '/teaching/timetable', title: '课表管理', titleKey: 'nav.timetableManage', icon: 'Calendar', roles: ['admin'] },
+    { path: '/timetable/my', title: '我的课表', titleKey: 'nav.myTimetable', icon: 'Calendar', roles: ['teacher', 'student'] },
+    { path: '/activities', title: '校园活动', titleKey: 'nav.activities', icon: 'Flag', roles: ['student', 'teacher', 'admin'] },
+    { path: '/elective/manage', title: '选修课管理', titleKey: 'nav.electiveManage', icon: 'Notebook', roles: ['admin', 'teacher'] },
+    { path: '/elective/select', title: '选课中心', titleKey: 'nav.electiveSelect', icon: 'Notebook', roles: ['student'] },
     // { path: '/campus-map', title: '校园导航', icon: 'MapLocation', roles: ['student', 'teacher'] },
     // { path: '/attendance', title: '考勤管理', icon: 'Checked', roles: ['teacher', 'admin'] },
     // { path: '/my-attendance', title: '我的考勤', icon: 'Checked', roles: ['student'] },
     // { path: '/services', title: '校园服务', icon: 'Service', roles: ['student', 'teacher', 'admin'] },
-    // { path: '/activities', title: '校园活动', icon: 'Flag', roles: ['student', 'teacher', 'admin'] },
     // { path: '/growth', title: '成长档案', icon: 'TrendCharts', roles: ['student'] },
-    { path: '/learning', title: '学习资源', icon: 'Reading', roles: ['student'] },
-    { path: '/ai-learning', title: 'AI学习助手', icon: 'Reading', roles: ['student'] },
-    { path: '/ai-writing', title: 'AI写作助手', icon: 'EditPen', roles: ['student'] },
-    { path: '/ai-ocr', title: 'AI智能识别', icon: 'Camera', roles: ['student'] },
-    { path: '/ai-creative', title: 'AI创意工具', icon: 'Picture', roles: ['student'] },
-    { path: '/ai-sentiment', title: 'AI情感分析', icon: 'Sunny', roles: ['student'] },
+    { path: '/learning', title: '学习资源', titleKey: 'nav.learning', icon: 'Reading', roles: ['student'] },
     // { path: '/energy', title: '能耗监测', icon: 'Odometer', roles: ['admin'] },
     // { path: '/security', title: '安全管理', icon: 'Lock', roles: ['admin'] },
-    { path: '/notifications', title: '通知中心', icon: 'Bell', roles: ['student', 'teacher', 'admin'] },
-    { path: '/profile', title: '个人设置', icon: 'Setting', roles: ['student', 'teacher', 'admin'] }
-  ]
+    { path: '/notifications', title: '通知中心', titleKey: 'nav.notifications', icon: 'Bell', roles: ['student', 'teacher', 'admin'] },
+    { path: '/profile', title: '个人设置', titleKey: 'nav.profile', icon: 'Setting', roles: ['student', 'teacher', 'admin'] }
+]
 
-  // 根据当前用户角色过滤菜单
+const menuItems = computed(() => {
+  const role = userStore.user?.role || 'student'
   return allMenus.filter(menu => menu.roles.includes(role))
 })
 
-const roleText = computed(() => {
-  const roles = { student: '学生', teacher: '教师', admin: '管理员' }
-  return roles[userStore.user?.role] || '用户'
+// 全局搜索：在可访问页面中按标题 / 路径匹配，回车或点击快速跳转
+const searchKeyword = ref('')
+function querySearch(query, cb) {
+  const keyword = (query || '').trim().toLowerCase()
+  const role = userStore.user?.role || 'student'
+  const pool = allMenus.filter(menu => menu.roles.includes(role))
+  const label = (menu) => (menu.titleKey ? t(menu.titleKey) : menu.title)
+  const matched = keyword
+    ? pool.filter(menu => label(menu).toLowerCase().includes(keyword) || menu.path.toLowerCase().includes(keyword))
+    : pool
+  cb(matched.map(menu => ({ value: label(menu), ...menu })))
+}
+
+function handleSearchSelect(item) {
+  searchKeyword.value = ''
+  if (item?.path && route.path !== item.path) {
+    router.push(item.path)
+  }
+}
+
+const roleText = computed(() => t(`role.${userStore.user?.role || 'user'}`))
+
+// 语言切换
+const localeShort = computed(() => (locale.value === 'zh-CN' ? '中' : 'EN'))
+
+// 主内容区左边距：紧凑屏幕侧栏改为浮层，不占位
+const mainClass = computed(() => {
+  if (isCompact.value) return 'ml-0'
+  return sidebarOpen.value ? 'ml-64' : 'ml-0'
+})
+
+// 进入紧凑屏幕自动收起侧栏，回到大屏自动展开
+watch(isCompact, (compact) => {
+  sidebarOpen.value = !compact
+})
+
+// 移动端切换路由后自动收起侧栏
+watch(() => route.path, () => {
+  if (isCompact.value) sidebarOpen.value = false
 })
 
 const userAvatarUrl = computed(() => {
@@ -305,7 +393,7 @@ const handleLogout = () => {
 
 const fetchGreeting = async () => {
   try {
-    const res = await api.social.greeting()
+    const res = await socialAPI.greeting()
     if (res.success) {
       greeting.value = res.data.greeting
     }
@@ -316,7 +404,7 @@ const fetchGreeting = async () => {
 
 const fetchNotifications = async () => {
   try {
-    const res = await api.notifications.list({ unreadOnly: true })
+    const res = await notificationAPI.list({ unreadOnly: true })
     if (res.success) {
       unreadCount.value = res.data.unreadCount
     }
@@ -484,6 +572,9 @@ onMounted(() => {
   updateTime()
   updateCampusData()
 
+  // 收到实时通知时刷新未读角标
+  window.addEventListener('app-notification', fetchNotifications)
+
   timeInterval = setInterval(updateTime, 1000)
   dataInterval = setInterval(() => {
     updateCampusData()
@@ -494,6 +585,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (timeInterval) clearInterval(timeInterval)
   if (dataInterval) clearInterval(dataInterval)
+  window.removeEventListener('app-notification', fetchNotifications)
 })
 </script>
 
@@ -507,6 +599,15 @@ onUnmounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* 移动端侧栏遮罩 */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
 }
 
 /* ========== 侧边栏样式 ========== */
@@ -893,5 +994,77 @@ onUnmounted(() => {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%) !important;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+}
+
+/* ========== 全局搜索 ========== */
+.lang-btn {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.global-search {
+  width: 240px;
+}
+
+.global-search :deep(.el-input__wrapper) {
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
+}
+
+:global(html.dark) .global-search :deep(.el-input__wrapper) {
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.search-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-suggestion .suggestion-icon {
+  color: #8b5cf6;
+}
+
+.search-suggestion .suggestion-title {
+  flex: 1;
+}
+
+.search-suggestion .suggestion-path {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .global-search {
+    width: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .global-search {
+    display: none;
+  }
+}
+
+/* ========== 深色模式微调 ========== */
+:global(html.dark) .top-navbar-cool {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+:global(html.dark) .time-card-cool,
+:global(html.dark) .weather-card-cool {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+:global(html.dark) .time-date {
+  color: #94a3b8;
+}
+
+:global(html.dark) .sidebar-gradient {
+  background: linear-gradient(180deg, #1b2b3f 0%, #16202f 50%, #0f172a 100%);
 }
 </style>

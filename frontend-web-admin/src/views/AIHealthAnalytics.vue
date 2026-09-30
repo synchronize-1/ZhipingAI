@@ -74,7 +74,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
-import api from '@/api'
+import { aiHealthAPI } from '@/api/aiHealth'
 import { Loading, CircleClose } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -223,8 +223,8 @@ const fetchData = async () => {
   error.value = ''
   try {
     const [analyticsRes, feedbackRes] = await Promise.all([
-      api.aiHealth.analytics(),
-      api.aiHealth.interventionFeedback()
+      aiHealthAPI.analytics(),
+      aiHealthAPI.interventionFeedback()
     ])
     if (analyticsRes.success) analytics.value = analyticsRes.data
     if (feedbackRes.success) feedback.value = feedbackRes.data

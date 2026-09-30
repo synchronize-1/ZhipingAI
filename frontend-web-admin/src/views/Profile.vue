@@ -168,7 +168,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { Camera, Upload, Delete, Check, RefreshLeft, Lock, Bell, Message, Moon } from '@element-plus/icons-vue'
-import api from '@/api'
+import { profileAPI } from '@/api/profile'
+import { authAPI } from '@/api/auth'
 
 const userStore = useUserStore()
 const fileInput = ref(null)
@@ -294,7 +295,7 @@ const handleFileChange = async (event) => {
     }, 100)
 
     // 上传头像
-    const response = await api.user.uploadAvatar(userStore.user.id, formData)
+    const response = await profileAPI.uploadAvatar(userStore.user.id, formData)
     
     clearInterval(progressInterval)
     uploadProgress.value = 100
@@ -322,7 +323,7 @@ const handleFileChange = async (event) => {
 
 const removeAvatar = async () => {
   try {
-    const response = await api.user.removeAvatar(userStore.user.id)
+    const response = await profileAPI.removeAvatar(userStore.user.id)
     if (response.success) {
       userInfo.value.avatar = ''
       // 使用 updateUser 方法更新 store
@@ -338,7 +339,7 @@ const removeAvatar = async () => {
 
 const saveProfile = async () => {
   try {
-    const response = await api.user.updateProfile(userStore.user.id, {
+    const response = await profileAPI.update(userStore.user.id, {
       name: userInfo.value.name,
       email: userInfo.value.email,
       phone: userInfo.value.phone
@@ -368,7 +369,7 @@ const changePassword = async () => {
   try {
     await passwordFormRef.value?.validate()
 
-    const response = await api.auth.changePassword({
+    const response = await authAPI.changePassword({
       oldPassword: passwordForm.value.oldPassword,
       newPassword: passwordForm.value.newPassword
     })

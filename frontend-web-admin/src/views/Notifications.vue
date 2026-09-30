@@ -17,6 +17,15 @@
               <el-radio-button label="admin">管理员通知</el-radio-button>
             </el-radio-group>
           </template>
+          <el-divider direction="vertical" />
+          <el-radio-group v-model="typeFilter" size="small">
+            <el-radio-button label="">全部类型</el-radio-button>
+            <el-radio-button label="system">系统</el-radio-button>
+            <el-radio-button label="course">教学</el-radio-button>
+            <el-radio-button label="activity">活动</el-radio-button>
+            <el-radio-button label="elective">选课</el-radio-button>
+            <el-radio-button label="emergency">紧急</el-radio-button>
+          </el-radio-group>
         </div>
         <div class="flex gap-2">
           <el-button v-if="isAdmin" type="success" @click="showPublishDialog = true">
@@ -93,6 +102,14 @@
                   <span class="text-xs">🎯</span>
                 </div>
                 <span>活动通知</span>
+              </div>
+            </el-option>
+            <el-option label="📝 选课通知" value="elective">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center">
+                  <span class="text-xs">📝</span>
+                </div>
+                <span>选课通知</span>
               </div>
             </el-option>
             <el-option label="⚠️ 紧急通知" value="emergency">
@@ -192,7 +209,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Bell, Reading, Flag, Warning, Delete, Promotion, UserFilled, User, Avatar, Setting, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import api from '@/api'
+import { notificationAPI } from '@/api/notifications'
 import dayjs from 'dayjs'
 
 defineOptions({ name: 'Notifications' })
@@ -205,6 +222,8 @@ const isAdmin = computed(() => currentRole.value === 'admin')
 
 // 管理员筛选器
 const roleFilter = ref('all')
+// 类型筛选器（全部 / 系统 / 教学 / 活动 / 选课 / 紧急）
+const typeFilter = ref('')
 
 // 通知数据
 const loading = ref(false)
@@ -246,6 +265,7 @@ const getTypeIcon = (type) => ({
   system: 'Bell',
   course: 'Reading',
   activity: 'Flag',
+  elective: 'Notebook',
   emergency: 'Warning'
 }[type] || 'Bell')
 
@@ -254,6 +274,7 @@ const getTypeClass = (type) => ({
   system: 'bg-blue-100 text-blue-600',
   course: 'bg-green-100 text-green-600',
   activity: 'bg-purple-100 text-purple-600',
+  elective: 'bg-amber-100 text-amber-600',
   emergency: 'bg-red-100 text-red-600'
 }[type] || 'bg-gray-100 text-gray-600')
 
@@ -303,9 +324,10 @@ const filterByRole = (notification) => {
 const fetchNotifications = async () => {
   loading.value = true
   try {
-    const res = await api.notifications.list({
+    const res = await notificationAPI.list({
       page: currentPage.value,
-      limit: pageSize.value
+      limit: pageSize.value,
+      type: typeFilter.value || undefined
     })
     if (res.success) {
       let data = res.data.notifications || []
@@ -327,7 +349,7 @@ const markRead = async (notification) => {
   if (notification.is_read) return
 
   try {
-    await api.notifications.markRead(notification.id)
+    await notificationAPI.markRead(notification.id)
     notification.is_read = true
     unreadCount.value = Math.max(0, unreadCount.value - 1)
   } catch (e) {
@@ -339,7 +361,7 @@ const markRead = async (notification) => {
 // 全部已读
 const markAllRead = async () => {
   try {
-    await api.notifications.markAllRead()
+    await notificationAPI.markAllRead()
     notifications.value.forEach(n => { n.is_read = true })
     unreadCount.value = 0
     ElMessage.success('已全部标记为已读')
@@ -352,7 +374,7 @@ const markAllRead = async () => {
 // 删除通知
 const deleteNotification = async (notification) => {
   try {
-    await api.notifications.delete(notification.id)
+    await notificationAPI.remove(notification.id)
     const index = notifications.value.findIndex(n => n.id === notification.id)
     if (index !== -1) {
       notifications.value.splice(index, 1)
@@ -376,7 +398,7 @@ const publishNotification = async () => {
 
     publishing.value = true
     try {
-      await api.notifications.create({
+      await notificationAPI.create({
         title: publishForm.value.title,
         content: publishForm.value.content,
         type: publishForm.value.type,
@@ -414,6 +436,8 @@ let refreshInterval = null
 
 onMounted(() => {
   fetchNotifications()
+  // 收到实时通知时刷新列表
+  window.addEventListener('app-notification', fetchNotifications)
   // 每30秒自动刷新一次
   refreshInterval = setInterval(() => {
     fetchNotifications()
@@ -424,11 +448,17 @@ onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval)
   }
+  window.removeEventListener('app-notification', fetchNotifications)
 })
 
 // 监听角色筛选变化
 import { watch } from 'vue'
 watch(roleFilter, () => {
+  fetchNotifications()
+})
+
+// 监听类型筛选变化
+watch(typeFilter, () => {
   fetchNotifications()
 })
 </script>

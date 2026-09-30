@@ -8,21 +8,39 @@ require('dotenv').config();
  *
  * 功能：
  * 1. 自动创建目标数据库（如果不存在）
- * 2. 读取 migrations 目录下的所有迁移文件
+ * 2. 读取 migrations 目录下的迁移文件（.sql 为主，兼容历史 .js）
  * 3. 记录已执行的迁移（schema_migrations 表）
  * 4. 按版本号顺序执行未执行的迁移
  * 5. 支持 up/down 迁移
+ *
+ * 文件命名约定：
+ *   V1.0.7_create_notifications.up.sql    升级脚本
+ *   V1.0.7_create_notifications.down.sql  回滚脚本（可选）
+ *   V0.0.1_init_users.js                  历史 JS 迁移（up/down 导出函数）
+ *
+ * 说明：迁移脚本一律写成「幂等」形式（CREATE TABLE IF NOT EXISTS、
+ * 条件 DDL、INSERT IGNORE 等），即使被重复执行也不会破坏已有数据。
  */
 
-// 从迁移文件名中提取版本号和名称
+const SQL_UP_RE = /^(V\d+\.\d+\.\d+)_(.+)\.up\.sql$/;
+const SQL_DOWN_RE = /^(V\d+\.\d+\.\d+)_(.+)\.down\.sql$/;
+const JS_RE = /^(V\d+\.\d+\.\d+)_(.+)\.js$/;
+
+// 从迁移文件名中提取版本号、名称与方向
 function parseMigrationFilename(filename) {
-    const match = filename.match(/^(V\d+\.\d+\.\d+)_(.+)\.js$/);
-    if (!match) return null;
-    return {
-        version: match[1],
-        name: match[2],
-        filename: filename
-    };
+    let match = filename.match(SQL_UP_RE);
+    if (match) {
+        return { version: match[1], name: match[2], direction: 'up', type: 'sql' };
+    }
+    match = filename.match(SQL_DOWN_RE);
+    if (match) {
+        return { version: match[1], name: match[2], direction: 'down', type: 'sql' };
+    }
+    match = filename.match(JS_RE);
+    if (match) {
+        return { version: match[1], name: match[2], direction: 'both', type: 'js' };
+    }
+    return null;
 }
 
 // 版本号比较函数
@@ -41,18 +59,20 @@ function compareVersions(a, b) {
  */
 async function createConnection() {
     const dbName = process.env.DB_NAME || 'smart_campus';
-
-    // 1. 不带 database 连接，用于建库
-    const bootstrapConnection = await mysql.createConnection({
+    const baseOptions = {
         host: process.env.DB_HOST || 'localhost',
         port: process.env.DB_PORT || 3306,
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '123456',
+        charset: 'utf8mb4',
         multipleStatements: true
-    });
+    };
+
+    // 1. 不带 database 连接，用于建库
+    const bootstrapConnection = await mysql.createConnection(baseOptions);
 
     try {
-        await bootstrapConnection.execute(
+        await bootstrapConnection.query(
             `CREATE DATABASE IF NOT EXISTS \`${dbName}\`
        DEFAULT CHARACTER SET utf8mb4
        DEFAULT COLLATE utf8mb4_unicode_ci`
@@ -63,20 +83,12 @@ async function createConnection() {
     }
 
     // 2. 连接目标库
-    const connection = await mysql.createConnection({
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 3306,
-        user: process.env.DB_USER || 'root',
-        password: process.env.DB_PASSWORD || '123456',
-        database: dbName,
-        multipleStatements: true
-    });
-    return connection;
+    return mysql.createConnection({ ...baseOptions, database: dbName });
 }
 
 // 确保 schema_migrations 表存在
 async function ensureMigrationsTable(connection) {
-    await connection.execute(`
+    await connection.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version VARCHAR(50) PRIMARY KEY COMMENT '迁移版本号，如 V1.0.0',
       name VARCHAR(100) COMMENT '迁移名称',
@@ -87,27 +99,82 @@ async function ensureMigrationsTable(connection) {
 
 // 获取所有已执行的迁移版本
 async function getExecutedMigrations(connection) {
-    const [rows] = await connection.execute(
+    const [rows] = await connection.query(
         'SELECT version, name, executed_at FROM schema_migrations ORDER BY version'
     );
     return rows;
 }
 
-// 获取所有迁移文件
+// 生成一个「执行 SQL 文件」的迁移步骤
+function createSqlStep(filePath, direction, version) {
+    return async (connection) => {
+        if (!fs.existsSync(filePath)) {
+            throw new Error(
+                `缺少 ${direction} 脚本: ${path.basename(filePath)}（版本 ${version}）`
+            );
+        }
+        const sql = fs.readFileSync(filePath, 'utf8');
+        await connection.query(sql);
+    };
+}
+
+// 生成一个「无 down 脚本」的占位步骤
+function createMissingDownStep(version) {
+    const step = async () => {
+        throw new Error(
+            `版本 ${version} 未提供 .down.sql 回滚脚本，无法自动回滚`
+        );
+    };
+    step.missing = true;
+    return step;
+}
+
+/**
+ * 扫描目录，把同一版本号的 .up.sql / .down.sql 合并为一个迁移项
+ */
 function getMigrationFiles(migrationsDir) {
     const files = fs.readdirSync(migrationsDir);
-    const migrations = [];
+    const byVersion = new Map();
 
     for (const file of files) {
         const parsed = parseMigrationFilename(file);
-        if (parsed) {
-            const migrationModule = require(path.join(migrationsDir, file));
-            migrations.push({
-                ...parsed,
-                up: migrationModule.up,
-                down: migrationModule.down
-            });
+        if (!parsed) continue;
+
+        let entry = byVersion.get(parsed.version);
+        if (!entry) {
+            entry = { version: parsed.version, name: parsed.name };
+            byVersion.set(parsed.version, entry);
         }
+
+        if (parsed.type === 'sql') {
+            // SQL 迁移优先于同版本的 JS 迁移
+            entry.source = 'sql';
+            entry.name = parsed.name;
+            const filePath = path.join(migrationsDir, file);
+            if (parsed.direction === 'up') {
+                entry.upPath = filePath;
+            } else {
+                entry.downPath = filePath;
+            }
+        } else if (entry.source !== 'sql') {
+            // 兼容历史 JS 迁移
+            const migrationModule = require(path.join(migrationsDir, file));
+            entry.source = 'js';
+            entry.name = parsed.name;
+            entry.up = migrationModule.up;
+            entry.down = migrationModule.down;
+        }
+    }
+
+    const migrations = [];
+    for (const entry of byVersion.values()) {
+        if (entry.source === 'sql') {
+            entry.up = createSqlStep(entry.upPath, 'up', entry.version);
+            entry.down = entry.downPath
+                ? createSqlStep(entry.downPath, 'down', entry.version)
+                : createMissingDownStep(entry.version);
+        }
+        migrations.push(entry);
     }
 
     migrations.sort((a, b) => compareVersions(a.version, b.version));
@@ -116,7 +183,7 @@ function getMigrationFiles(migrationsDir) {
 
 // 记录迁移执行
 async function recordMigration(connection, version, name) {
-    await connection.execute(
+    await connection.query(
         'INSERT INTO schema_migrations (version, name) VALUES (?, ?)',
         [version, name]
     );
@@ -124,7 +191,7 @@ async function recordMigration(connection, version, name) {
 
 // 删除迁移记录（回滚时）
 async function removeMigrationRecord(connection, version) {
-    await connection.execute(
+    await connection.query(
         'DELETE FROM schema_migrations WHERE version = ?',
         [version]
     );
@@ -168,7 +235,7 @@ async function runMigrations(options = {}) {
 
         console.log(`📋 发现 ${pendingMigrations.length} 个待执行迁移：`);
         pendingMigrations.forEach((migration, index) => {
-            console.log(`   ${index + 1}. ${migration.version} - ${migration.name}`);
+            console.log(`   ${index + 1}. ${migration.version} - ${migration.name} [${migration.source}]`);
         });
         console.log('');
 
@@ -199,6 +266,7 @@ async function runMigrations(options = {}) {
 
 /**
  * 回滚指定版本的迁移（down）
+ * 回滚所有版本号大于 targetVersion 的已执行迁移
  */
 async function rollbackMigrations(targetVersion, options = {}) {
     const migrationsDir = options.migrationsDir || path.join(__dirname);
@@ -299,13 +367,33 @@ module.exports = {
     runMigrations,
     rollbackMigrations,
     getMigrationStatus,
+    getMigrationFiles,
     createConnection
 };
 
-// 如果直接运行此文件，则执行所有迁移
+// CLI：node src/migrations/index.js [up|down <version>|status]
 if (require.main === module) {
-    runMigrations().catch((err) => {
+    const [action, target] = process.argv.slice(2);
+
+    const fail = (err) => {
         console.error('迁移执行失败:', err);
         process.exit(1);
-    });
+    };
+
+    if (action === 'down') {
+        if (!target) {
+            console.error('用法: node src/migrations/index.js down <目标版本>');
+            process.exit(1);
+        }
+        rollbackMigrations(target).catch(fail);
+    } else if (action === 'status') {
+        getMigrationStatus()
+            .then((s) => {
+                console.log(`已应用 ${s.applied}/${s.total}，当前版本 ${s.currentVersion || '无'}`);
+                s.pendingMigrations.forEach((m) => console.log(`  待执行: ${m.version} - ${m.name}`));
+            })
+            .catch(fail);
+    } else {
+        runMigrations().catch(fail);
+    }
 }

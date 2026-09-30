@@ -369,7 +369,7 @@ import { ElMessage } from 'element-plus'
 import { Search, ShoppingCart, Minus, Plus, Clock, Star } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useSocketStore } from '@/stores/socket'
-import api from '@/api'
+import { serviceAPI } from '@/api/services'
 
 defineOptions({ name: 'Services' })
 
@@ -425,7 +425,7 @@ const handleBookCoverError = (e) => {
 const fetchBooks = async () => {
   bookLoading.value = true
   try {
-    const res = await api.services.books({
+    const res = await serviceAPI.books({
       keyword: bookSearch.value,
       category: bookCategory.value,
       page: bookPage.value,
@@ -460,7 +460,7 @@ const borrowBook = async (book) => {
   const userRole = userStore.user?.role || 'student'
 
   try {
-    await api.services.borrowBook(book.id)
+    await serviceAPI.borrowBook(book.id)
     ElMessage.success(`成功借阅《${book.title}》`)
     showBookDialog.value = false
     fetchBooks()
@@ -508,7 +508,7 @@ const getCrowdColor = (level) => {
 
 const fetchCanteens = async () => {
   try {
-    const res = await api.services.canteenCrowd()
+    const res = await serviceAPI.canteenCrowd()
     if (res.success && res.data) {
       canteenList.value = res.data
     } else {
@@ -597,7 +597,7 @@ const fetchMenu = async () => {
   menuLoading.value = true
   try {
     // 尝试调用后端接口
-    const res = await api.services.menu(selectedCanteenId.value)
+    const res = await serviceAPI.menu(selectedCanteenId.value)
     if (res.success && res.data && res.data.length > 0) {
       menuItems.value = res.data
     } else {

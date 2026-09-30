@@ -65,7 +65,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
-import api from '@/api'
+import { aiHealthAPI } from '@/api/aiHealth'
 import { Loading, CircleClose } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -234,7 +234,7 @@ const fetchOverview = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res = await api.aiHealth.overview()
+    const res = await aiHealthAPI.overview()
     if (res.success) {
       overview.value = { ...overview.value, ...res.data }
       renderAllCharts()

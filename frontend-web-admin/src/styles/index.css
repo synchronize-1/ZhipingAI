@@ -154,3 +154,92 @@ body {
 .sidebar-item.active {
   @apply bg-blue-600 text-white;
 }
+
+/* ==================== 响应式适配 ==================== */
+
+/* 表格：窄屏允许横向滚动，缩小字号与内边距 */
+.el-table {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .el-card__body {
+    padding: 14px;
+  }
+
+  .el-table {
+    font-size: 13px;
+  }
+
+  .el-table .el-table__cell {
+    padding: 6px 0;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 弹窗 / 抽屉 / 消息框占满可视宽度 */
+  .el-dialog {
+    width: 92% !important;
+    margin-top: 6vh !important;
+  }
+
+  .el-drawer {
+    width: 88% !important;
+  }
+
+  .el-message-box {
+    width: 90% !important;
+  }
+
+  /* 分页自动换行并居中 */
+  .el-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 8px;
+  }
+
+  /* 表单标签在窄屏改为顶对齐，避免挤压输入框 */
+  .el-form--label-left .el-form-item__label,
+  .el-form-item__label {
+    float: none;
+    display: block;
+    width: auto !important;
+    text-align: left;
+    padding: 0 0 6px;
+  }
+
+  .el-form-item__content {
+    margin-left: 0 !important;
+  }
+
+  /* 卡片内边距进一步收紧 */
+  .el-card__body {
+    padding: 12px;
+  }
+
+  .el-card__header {
+    padding: 12px 14px;
+  }
+
+  /* 页头操作按钮换行 */
+  .page-header__main {
+    flex-wrap: wrap;
+  }
+
+  .page-header__extra {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+/* 小屏下工具条 / 筛选区统一纵向排列 */
+@media (max-width: 640px) {
+  .el-table .el-button + .el-button {
+    margin-left: 6px;
+  }
+
+  .el-tabs__item {
+    padding: 0 12px;
+    font-size: 14px;
+  }
+}

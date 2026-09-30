@@ -41,6 +41,9 @@ function errorHandler(err, req, res, next) {
     }
   }
 
+  // 供审计中间件记录失败原因
+  res.locals.errorMessage = message;
+
   // 开发环境返回详细错误信息
   if (process.env.NODE_ENV === 'development') {
     return res.status(statusCode).json({

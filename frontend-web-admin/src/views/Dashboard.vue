@@ -49,8 +49,8 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, onActivated } from 'vue'
-import * as echarts from 'echarts'
-import api from '@/api'
+import { ElMessage } from 'element-plus'
+import { homeAPI } from '@/api/home'
 import { TrendCharts, Refresh, FullScreen, User, Avatar, Reading, Bell, Flag, Monitor, DataAnalysis } from '@element-plus/icons-vue'
 import AIHealthOverview from '@/views/AIHealthOverview.vue'
 import AIHealthAnalytics from '@/views/AIHealthAnalytics.vue'
@@ -75,61 +75,27 @@ const statsCards = ref([
 // 刷新所有数据
 const refreshAllData = async () => {
   await fetchOverviewData()
-  await fetchAIStats()
   ElMessage.success('数据已刷新')
 }
 
-// 获取概览数据
+// 概览数据：统计卡片与 AI 使用指标统一取自 v2 首页聚合接口
 const fetchOverviewData = async () => {
   try {
-    const res = await api.dashboard.overview()
-    if (res.success && res.data) {
-      const data = res.data
-      statsCards.value[0].value = data.total_students?.toLocaleString() || '0'
-      statsCards.value[1].value = data.total_teachers?.toLocaleString() || '0'
-      statsCards.value[2].value = data.total_courses?.toLocaleString() || '0'
+    const res = await homeAPI.dashboard()
+    const data = res.data
+    if (!data) return
 
-      // 随机变化率演示（实际应从后端获取）
-      statsCards.value[0].change = 2.5
-      statsCards.value[1].change = 1.2
-      statsCards.value[2].change = -3.1
-    }
-  } catch (e) {
-    console.error('获取概览数据失败:', e)
-  }
-}
+    const stats = data.stats || {}
+    statsCards.value[0].value = (stats.studentCount || 0).toLocaleString()
+    statsCards.value[1].value = (stats.teacherCount || 0).toLocaleString()
+    statsCards.value[2].value = (stats.totalCourses || 0).toLocaleString()
 
-// 获取AI统计数据
-const fetchAIStats = async () => {
-  try {
-    const res = await api.dashboard.aiStats()
-    if (res.success && res.data) {
-      const data = res.data
-      statsCards.value[3].value = data.activeToday?.toLocaleString() || '0'
-      statsCards.value[4].value = `${data.coverageRate || 0}%`
-      statsCards.value[3].change = 5.2
-      statsCards.value[4].change = 3.8
-    }
+    const ai = data.aiStats || {}
+    statsCards.value[3].value = (ai.activeToday || 0).toLocaleString()
+    statsCards.value[4].value = `${ai.coverageRate || 0}%`
+    statsCards.value[5].value = (ai.warningCount || 0).toLocaleString()
   } catch (e) {
-    console.error('获取AI统计失败:', e)
-    // 降级显示模拟数据
-    statsCards.value[3].value = '1,234'
-    statsCards.value[4].value = '45%'
-    statsCards.value[3].change = 5.2
-    statsCards.value[4].change = 3.8
-  }
-}
-
-// 获取预警数量
-const fetchWarningCount = async () => {
-  try {
-    const res = await api.aiHealth.warnings()
-    if (res.success && res.data) {
-      statsCards.value[5].value = res.data.length?.toString() || '0'
-    }
-  } catch (e) {
-    console.error('获取预警数量失败:', e)
-    statsCards.value[5].value = '0'
+    console.error('获取首页聚合数据失败:', e)
   }
 }
 
@@ -155,16 +121,13 @@ let timeInterval = null
 
 onMounted(() => {
   fetchOverviewData()
-  fetchAIStats()
-  fetchWarningCount()
   updateTime()
   timeInterval = setInterval(updateTime, 1000)
 })
 
 onActivated(() => {
   // 从 keep-alive 缓存激活时，刷新数据
-  fetchAIStats()
-  fetchWarningCount()
+  fetchOverviewData()
 })
 
 onUnmounted(() => {

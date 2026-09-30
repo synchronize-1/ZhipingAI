@@ -124,6 +124,20 @@ class Exam {
     return rows;
   }
 
+  // 查询某班级有成绩记录的考试列表（按考试日期倒序，用于进步/退步对比时选取基准考试）
+  static async getExamsWithScoresForClass(classId) {
+    const [rows] = await pool.execute(
+      `SELECT e.id, e.name, e.exam_type, e.grade, e.exam_date, e.semester
+       FROM exams e
+       INNER JOIN exam_scores es ON es.exam_id = e.id
+       WHERE es.class_id = ?
+       GROUP BY e.id, e.name, e.exam_type, e.grade, e.exam_date, e.semester
+       ORDER BY e.exam_date DESC, e.id DESC`,
+      [classId]
+    );
+    return rows;
+  }
+
   // 获取考试科目列表
   static async getExamSubjects(examId) {
     const [rows] = await pool.execute(

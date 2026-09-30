@@ -4,6 +4,7 @@ const PortfolioHonor = require('../models/PortfolioHonor.model');
 const PortfolioMentalHealth = require('../models/PortfolioMentalHealth.model');
 const PortfolioComment = require('../models/PortfolioComment.model');
 const DeepSeekService = require('./deepseek.service');
+const NotificationService = require('./notification.service');
 const { ErrorCode } = require('../utils/response');
 
 class PortfolioService {
@@ -335,6 +336,15 @@ class PortfolioService {
       studentId,
       createdBy
     });
+
+    // 评语发布通知（异步，失败不影响主流程）
+    NotificationService.create({
+      title: '收到新评语',
+      content: '老师为你撰写了一条新评语，可在成长档案中查看。',
+      type: 'course',
+      userId: studentId,
+      createdBy
+    }).catch(() => { /* 通知失败不影响评语创建 */ });
 
     return { id };
   }

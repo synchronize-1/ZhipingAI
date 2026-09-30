@@ -251,7 +251,7 @@ router.get('/students', verifyToken, checkRole('admin'), async (req, res) => {
                 u.name, 
                 u.username, 
                 u.department,
-                u.class_name,
+                c.name as class_name,
                 u.email,
                 u.phone,
                 u.created_at,
@@ -259,6 +259,7 @@ router.get('/students', verifyToken, checkRole('admin'), async (req, res) => {
                 COALESCE(s.dependence_score, u.dependence_score) as dependence_score,
                 COALESCE(s.dependence_level, u.dependence_level) as dependence_level
             FROM users u
+            LEFT JOIN classes c ON u.class_id = c.id
             LEFT JOIN ai_survey_responses s ON u.id = s.user_id
             ${whereClause}
             ORDER BY u.id
@@ -296,10 +297,11 @@ router.get('/students/:id', verifyToken, checkRole('admin'), async (req, res) =>
 
         // 获取学生基本信息（增加 email, phone, class_name）
         const [studentRows] = await pool.execute(
-            `SELECT id, name, username, department, class_name, student_id, email, phone, created_at,
-                    dependence_score, dependence_level
-             FROM users
-             WHERE id = ? AND role = 'student'`,
+            `SELECT u.id, u.name, u.username, u.department, c.name AS class_name, u.student_id,
+                    u.email, u.phone, u.created_at, u.dependence_score, u.dependence_level
+             FROM users u
+             LEFT JOIN classes c ON u.class_id = c.id
+             WHERE u.id = ? AND u.role = 'student'`,
             [studentId]
         );
 
@@ -378,7 +380,7 @@ router.get('/warnings', verifyToken, checkRole('admin'), async (req, res) => {
             SELECT 
                 u.id,
                 u.name,
-                COALESCE(s.dependence_level, '轻度') as dependence_level,
+                COALESCE(MAX(s.dependence_level), '轻度') as dependence_level,
                 AVG(l.session_length_min) as avg_usage,
                 COUNT(l.id) as usage_count,
                 MAX(l.session_date) as last_activity
@@ -608,9 +610,11 @@ router.get('/student-warning/:id', verifyToken, checkRole('admin'), async (req, 
 
         // 获取学生基本信息
         const [studentRows] = await pool.execute(
-            `SELECT id, name, username, class_name, student_id, email, phone, dependence_score, dependence_level
-       FROM users
-       WHERE id = ? AND role = 'student'`,
+            `SELECT u.id, u.name, u.username, c.name AS class_name, u.student_id, u.email, u.phone,
+                    u.dependence_score, u.dependence_level
+       FROM users u
+       LEFT JOIN classes c ON u.class_id = c.id
+       WHERE u.id = ? AND u.role = 'student'`,
             [studentId]
         );
 

@@ -115,6 +115,7 @@ router.post('/scores/import', verifyToken, checkRole('admin', 'teacher'), asyncH
   }
 
   let result;
+  let notifyClassId = classId;
   // 新格式：rows 数组（Excel 导入后的数据格式）
   if (rows && Array.isArray(rows)) {
     if (!classId) {
@@ -128,8 +129,13 @@ router.post('/scores/import', verifyToken, checkRole('admin', 'teacher'), asyncH
       return fail(res, '参数不完整：缺少 scores 或 rows', ErrorCode.PARAM_VALIDATION);
     }
     result = await TeachingService.importScores(examId, scores);
+    notifyClassId = notifyClassId || scores[0]?.classId;
     success(res, result, `成功导入 ${result.affectedRows} 条成绩`);
   }
+
+  // 成绩发布通知（异步，不阻断响应）
+  TeachingService.notifyScorePublished(examId, notifyClassId, req.user.id)
+    .catch(() => { /* 通知失败不影响导入结果 */ });
 }));
 
 // Excel 成绩预览（上传 Excel 文件，解析并校验数据）
@@ -234,6 +240,19 @@ router.get('/analysis/student/:studentId', verifyToken, checkRole('admin', 'teac
   const { examId } = req.query;
   const analysis = await TeachingService.getStudentAnalysis(req.params.studentId, examId || null);
   success(res, analysis);
+}));
+
+// 进步/退步学生识别（对比两次考试）
+router.get('/analysis/progress/:examId/:classId', verifyToken, checkRole('admin', 'teacher'), asyncHandler(async (req, res) => {
+  const { baseExamId, subjectId, limit } = req.query;
+  const result = await TeachingService.getProgressComparison(
+    req.params.examId,
+    req.params.classId,
+    baseExamId || null,
+    subjectId || null,
+    limit
+  );
+  success(res, result);
 }));
 
 // ==================== AI 学情诊断（管理员、教师） ====================

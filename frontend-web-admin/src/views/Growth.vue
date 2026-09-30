@@ -263,7 +263,7 @@ import { useUserStore } from '@/stores/user'
 
 defineOptions({ name: 'Growth' })
 import * as echarts from 'echarts'
-import api from '@/api'
+import { socialAPI } from '@/api/social'
 
 const userStore = useUserStore()
 const growthData = ref({ academic: [], activities: [], skills: [], honors: [], mentalHealth: [] })
@@ -505,7 +505,7 @@ const initCharts = () => {
 
 const fetchGrowthData = async () => {
   try {
-    const res = await api.social.growth(userStore.user?.id)
+    const res = await socialAPI.growth(userStore.user?.id)
     if (res.success) growthData.value = res.data || {}
     setTimeout(initCharts, 100)
   } catch (e) {

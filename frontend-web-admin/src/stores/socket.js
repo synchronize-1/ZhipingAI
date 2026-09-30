@@ -176,6 +176,8 @@ export const useSocketStore = defineStore('socket', {
           type: data.type || 'info',
           duration: 4000
         })
+        // 通知顶部栏刷新未读角标与通知页列表
+        window.dispatchEvent(new CustomEvent('app-notification', { detail: data }))
       })
     },
     

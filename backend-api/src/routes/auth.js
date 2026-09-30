@@ -2,9 +2,20 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { generateToken, verifyToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
+const { authRateLimit } = require('../middleware/rateLimit');
 
 // 用户登录
-router.post('/login', async (req, res) => {
+router.post(
+  '/login',
+  authRateLimit,
+  validate({
+    body: {
+      username: { required: true, type: 'string', min: 1, max: 50 },
+      password: { required: true, type: 'string', min: 1, max: 100, trim: false }
+    }
+  }),
+  async (req, res) => {
   try {
     const { username, password } = req.body;
     
@@ -49,7 +60,20 @@ router.post('/login', async (req, res) => {
 });
 
 // 用户注册
-router.post('/register', async (req, res) => {
+router.post(
+  '/register',
+  authRateLimit,
+  validate({
+    body: {
+      username: { required: true, type: 'string', min: 3, max: 50 },
+      password: { required: true, type: 'string', min: 6, max: 100, trim: false },
+      name: { required: true, type: 'string', min: 1, max: 50 },
+      role: { required: true, type: 'string', enum: ['student', 'teacher', 'admin'] },
+      email: { type: 'string', max: 100 },
+      phone: { type: 'string', max: 20 }
+    }
+  }),
+  async (req, res) => {
   try {
     const { username, password, name, role, email, phone, department, studentId, employeeId } = req.body;
     

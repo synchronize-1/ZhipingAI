@@ -132,7 +132,7 @@
             </div>
           </div>
           <div class="manage-grid">
-            <div v-for="item in quickManage" :key="item.name" class="manage-item" @click="navigateTo(item.path)">
+            <div v-for="item in quickManage" :key="item.name" class="manage-item" @click="handleQuickManage(item)">
               <div class="manage-icon" :style="{ background: item.gradient }">
                 <el-icon :size="22">
                   <User v-if="item.iconName === 'User'" />
@@ -411,7 +411,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
-import api from '@/api'
+import { aiHealthAPI } from '@/api/aiHealth'
+import { notificationAPI } from '@/api/notifications'
 import { homeAPI } from '@/api/home'
 import {
   Setting, Refresh, User, Checked, Monitor, Service,
@@ -486,10 +487,10 @@ const recentNotifications = ref([])
 // 快捷管理（数量使用真实数据）
 const quickManage = ref([
   { name: '用户管理', iconName: 'User', path: '/users', count: '', gradient: 'linear-gradient(135deg, #667eea, #764ba2)' },
-  { name: '班级管理', iconName: 'School', path: '/teaching/class-manage', count: '', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
-  { name: '考试管理', iconName: 'Trophy', path: '/teaching/exam-list', count: '', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { name: '学科管理', iconName: 'Reading', path: '/teaching/subject-manage', count: '', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
-  { name: 'AI健康评估', iconName: 'DataAnalysis', path: '/admin-health', count: '评估', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+  { name: '班级管理', iconName: 'School', path: '/teaching/classes', count: '', gradient: 'linear-gradient(135deg, #11998e, #38ef7d)' },
+  { name: '考试管理', iconName: 'Trophy', path: '/teaching/exams', count: '', gradient: 'linear-gradient(135deg, #f093fb, #f5576c)' },
+  { name: '学科管理', iconName: 'Reading', path: '/teaching/subjects', count: '', gradient: 'linear-gradient(135deg, #fa709a, #fee140)' },
+  { name: 'AI健康评估', iconName: 'DataAnalysis', path: '', count: '评估', gradient: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
   { name: '通知发布', iconName: 'Bell', path: '/notifications', count: '发布', gradient: 'linear-gradient(135deg, #a8edea, #fed6e3)' }
 ])
 
@@ -552,6 +553,11 @@ const fetchDashboard = async () => {
       classStats.value = data.classStats || []
       // 最近通知
       recentNotifications.value = data.recentNotifications || []
+      // AI 使用统计（并入首页聚合接口）
+      if (data.aiStats) {
+        aiUsageHoursWeekly.value = data.aiStats.usageHoursWeekly || 0
+        avgDependenceScore.value = data.aiStats.avgDependenceScore || 0
+      }
       // 更新快捷管理数量
       updateQuickManageCounts()
     }
@@ -577,23 +583,9 @@ const updateQuickManageCounts = () => {
   })
 }
 
-const fetchOverview = async () => {
-  try {
-    const res = await api.dashboard.overview()
-    if (res.success) {
-      totalUsers.value = res.data.total_students + res.data.total_teachers
-      studentCount.value = res.data.total_students
-      teacherCount.value = res.data.total_teachers
-      pendingServices.value = res.data.pending_repairs || 0
-    }
-  } catch (e) {
-    console.error('获取概览数据失败:', e)
-  }
-}
-
 const fetchWarnings = async () => {
   try {
-    const res = await api.aiHealth.warnings()
+    const res = await aiHealthAPI.warnings()
     if (res.success) {
       warnings.value = res.data || []
       warningsCount.value = warnings.value.length
@@ -605,24 +597,9 @@ const fetchWarnings = async () => {
   }
 }
 
-const fetchAIStats = async () => {
-  try {
-    const res = await api.dashboard.aiStats?.()
-    if (res?.success) {
-      aiUsageHoursWeekly.value = res.data.aiUsageHoursWeekly || 184
-      avgDependenceScore.value = res.data.avgDependenceScore || 58
-    }
-  } catch (e) {
-    console.error('获取AI统计失败:', e)
-    // 使用默认值
-    aiUsageHoursWeekly.value = 184
-    avgDependenceScore.value = 58
-  }
-}
-
 const fetchNotifications = async () => {
   try {
-    const res = await api.notifications.list({ unreadOnly: true })
+    const res = await notificationAPI.list({ unreadOnly: true })
     if (res.success) {
       unreadNotifications.value = res.data.unreadCount || 0
     }
@@ -635,7 +612,6 @@ const fetchNotifications = async () => {
 const refreshData = () => {
   fetchDashboard()
   fetchWarnings()
-  fetchAIStats()
   fetchNotifications()
   ElMessage.success('数据已刷新')
 }
@@ -645,8 +621,18 @@ const navigateTo = (path) => {
   router.push(path)
 }
 
+// 快捷管理点击：AI 健康评估已并入首页看板，无独立路由，改为提示
+const handleQuickManage = (item) => {
+  if (!item.path) {
+    goToAIHealth()
+    return
+  }
+  navigateTo(item.path)
+}
+
 const goToAIHealth = () => {
-  router.push('/admin-health')
+  // AI 健康评估页已并入首页看板，不再单独跳转
+  ElMessage.info('AI 健康评估数据已汇总在首页看板中')
 }
 
 // ==================== 预警详情弹窗 ====================
@@ -657,10 +643,10 @@ const showStudentDetail = async (warning) => {
 
   try {
     // 从学生列表中查找学生ID（这里简化处理，实际需要从API获取学生详情）
-    const studentsRes = await api.aiHealth.students({ keyword: warning.studentName })
+    const studentsRes = await aiHealthAPI.students({ keyword: warning.studentName })
     if (studentsRes.success && studentsRes.data.length > 0) {
       const student = studentsRes.data[0]
-      const detailRes = await api.aiHealth.studentDetail(student.id)
+      const detailRes = await aiHealthAPI.studentDetail(student.id)
       if (detailRes.success) {
         studentDetail.value = detailRes.data
         await nextTick()
@@ -809,7 +795,6 @@ const handleResize = () => {
 onMounted(() => {
   fetchDashboard()
   fetchWarnings()
-  fetchAIStats()
   fetchNotifications()
   setTimeout(renderMiniChart, 100)
   window.addEventListener('resize', handleResize)
