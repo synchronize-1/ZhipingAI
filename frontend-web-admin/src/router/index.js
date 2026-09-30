@@ -94,12 +94,6 @@ const routes = [
                 component: () => import('@/views/elective/ElectiveSelect.vue'),
                 meta: { title: '选课中心', icon: 'Notebook', roles: ['student'] }
             },
-            // {
-            //     path: 'services',
-            //     name: 'Services',
-            //     component: () => import('@/views/Services.vue'),
-            //     meta: { title: '校园服务', icon: 'Service' }
-            // },
             {
                 path: 'growth',
                 name: 'Growth',

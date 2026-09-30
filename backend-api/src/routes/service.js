@@ -1,8 +1,8 @@
 // backend-api/src/routes/service.js
 const express = require('express');
 const router = express.Router();
-const Service = require('../models/Service');
-const Room = require('../models/Room');
+const Service = require('../models/Service.model');
+const Room = require('../models/Room.model');
 const { verifyToken, checkRole } = require('../middleware/auth');
 
 // ========== 空闲教室查询 ==========

@@ -121,7 +121,7 @@ module.exports = (io) => {
       const { latitude, longitude } = data;
       
       // 检查是否有即将上课的课程
-      const Schedule = require('../models/Schedule');
+      const Schedule = require('../models/Schedule.model');
       const upcomingClass = await Schedule.getUpcomingClass(socket.user.id, 30);
       
       if (upcomingClass) {
@@ -330,7 +330,7 @@ module.exports = (io) => {
   // 定时广播食堂人流数据
   setInterval(async () => {
     try {
-      const Service = require('../models/Service');
+      const Service = require('../models/Service.model');
       const crowdLevels = await Service.getAllCanteenCrowdLevels();
       
       crowdLevels.forEach(canteen => {

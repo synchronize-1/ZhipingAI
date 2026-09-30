@@ -1,4 +1,4 @@
-const User = require('../models/User');
+const User = require('../models/User.model');
 const { generateToken } = require('../middleware/auth');
 const { ErrorCode } = require('../utils/response');
 

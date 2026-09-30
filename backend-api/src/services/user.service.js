@@ -1,5 +1,5 @@
 const XLSX = require('xlsx');
-const User = require('../models/User');
+const User = require('../models/User.model');
 const Class = require('../models/Class.model');
 const { ErrorCode } = require('../utils/response');
 

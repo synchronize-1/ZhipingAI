@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Social = require('../models/Social');
+const Social = require('../models/Social.model');
 const { verifyToken, checkRole } = require('../middleware/auth');
 
 // ========== 活动管理 ==========

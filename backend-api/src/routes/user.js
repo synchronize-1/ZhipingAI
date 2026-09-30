@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const User = require('../models/User');
+const User = require('../models/User.model');
 const { verifyToken, checkRole } = require('../middleware/auth');
 
 // 配置文件上传
@@ -113,7 +113,7 @@ router.get('/:id/dashboard', verifyToken, async (req, res) => {
     switch (user.role) {
       case 'student':
         // 学生首页：课表、通知、待办
-        const Schedule = require('../models/Schedule');
+        const Schedule = require('../models/Schedule.model');
         const todaySchedule = await Schedule.getTodaySchedule(userId);
         
         const [notifications] = await pool.execute(
@@ -131,7 +131,7 @@ router.get('/:id/dashboard', verifyToken, async (req, res) => {
         
       case 'teacher':
         // 教师首页：今日课程、待办、学生反馈
-        const teacherSchedule = await require('../models/Schedule').getByTeacherId(userId);
+        const teacherSchedule = await require('../models/Schedule.model').getByTeacherId(userId);
         
         const [teacherTodos] = await pool.execute(
           'SELECT * FROM todos WHERE user_id = ? AND status != "completed" ORDER BY due_date LIMIT 5',

@@ -1,4 +1,4 @@
-// backend-api/src/models/Services.js
+// backend-api/src/models/Service.model.js
 const pool = require('../config/database');
 
 class Service {

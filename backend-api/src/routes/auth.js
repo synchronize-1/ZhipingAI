@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User');
+const User = require('../models/User.model');
 const { generateToken, verifyToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { authRateLimit } = require('../middleware/rateLimit');
