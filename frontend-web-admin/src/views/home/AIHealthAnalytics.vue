@@ -1,4 +1,4 @@
-<!-- frontend-web-admin/src/views/AIHealthAnalytics.vue -->
+<!-- frontend-web-admin/src/views/home/AIHealthAnalytics.vue -->
 <template>
   <div class="ai-health-analytics" :class="{ 'is-compact': compact }">
     <div v-if="loading" class="state-text">

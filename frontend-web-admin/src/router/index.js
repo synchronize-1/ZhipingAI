@@ -6,7 +6,7 @@ const routes = [
     {
         path: '/login',
         name: 'Login',
-        component: () => import('@/views/Login.vue'),
+        component: () => import('@/views/auth/Login.vue'),
         meta: { requiresAuth: false }
     },
     {
@@ -17,51 +17,51 @@ const routes = [
             {
                 path: '',
                 name: 'Dashboard',
-                component: () => import('@/views/Dashboard.vue'),
+                component: () => import('@/views/home/Dashboard.vue'),
                 meta: { title: '数据可视化大屏', icon: 'DataAnalysis', roles: ['admin'] }
             },
             //从home 定义不同角色的vue组件
             {
                 path: 'home',
                 name: 'Home',
-                component: () => import('@/views/Home.vue'),
+                component: () => import('@/views/home/Home.vue'),
                 meta: { title: '首页', icon: 'HomeFilled' }
             },
             {
                 path: 'student-home',
                 name: 'StudentHome',
-                component: () => import('@/views/StudentHome.vue'),
+                component: () => import('@/views/home/StudentHome.vue'),
                 meta: { title: '学生首页', icon: 'HomeFilled', roles: ['student'] }
             },
             {
                 path: 'teacher-home',
                 name: 'TeacherHome',
-                component: () => import('@/views/TeacherHome.vue'),
+                component: () => import('@/views/home/TeacherHome.vue'),
                 meta: { title: '教师首页', icon: 'HomeFilled', roles: ['teacher'] }
             },
             {
                 path: 'admin-home',
                 name: 'AdminHome',
-                component: () => import('@/views/AdminHome.vue'),
+                component: () => import('@/views/home/AdminHome.vue'),
                 meta: { title: '管理员首页', icon: 'HomeFilled', roles: ['admin'] }
             },
             {
                 path: 'users',
                 name: 'Users',
-                component: () => import('@/views/Users.vue'),
+                component: () => import('@/views/system/Users.vue'),
                 meta: { title: '用户管理', icon: 'User', roles: ['admin'] }
             },
             //课程
             {
                 path: 'courses',
                 name: 'Courses',
-                component: () => import('@/views/Courses.vue'),
+                component: () => import('@/views/course/Courses.vue'),
                 meta: { title: '课程管理', icon: 'Reading', roles: ['teacher', 'admin'] }
             },
             {
                 path: 'my-courses',
                 name: 'MyCourses',
-                component: () => import('@/views/Courses.vue'),
+                component: () => import('@/views/course/Courses.vue'),
                 meta: { title: '我的课程', icon: 'Reading', roles: ['student'] }
             },
             {
@@ -97,25 +97,25 @@ const routes = [
             {
                 path: 'growth',
                 name: 'Growth',
-                component: () => import('@/views/Growth.vue'),
+                component: () => import('@/views/student/Growth.vue'),
                 meta: { title: '成长档案', icon: 'TrendCharts', roles: ['student'] }
             },
             {
                 path: 'learning',
                 name: 'Learning',
-                component: () => import('@/views/Learning.vue'),
+                component: () => import('@/views/student/Learning.vue'),
                 meta: { title: '学习资源', icon: 'Reading', roles: ['student'] }
             },
             {
                 path: 'notifications',
                 name: 'Notifications',
-                component: () => import('@/views/Notifications.vue'),
+                component: () => import('@/views/system/Notifications.vue'),
                 meta: { title: '通知中心', icon: 'Bell' }
             },
             {
                 path: 'profile',
                 name: 'Profile',
-                component: () => import('@/views/Profile.vue'),
+                component: () => import('@/views/system/Profile.vue'),
                 meta: { title: '个人设置', icon: 'Setting' }
             },
             // ===== 教学质量评估模块 =====
@@ -203,7 +203,7 @@ const routes = [
     {
         path: '/:pathMatch(.*)*',
         name: 'NotFound',
-        component: () => import('@/views/NotFound.vue')
+        component: () => import('@/views/auth/NotFound.vue')
     }
 ]
 

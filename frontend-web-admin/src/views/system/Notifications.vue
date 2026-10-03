@@ -1,4 +1,4 @@
-<!-- frontend-web-admin/src/views/Notifications.vue -->
+<!-- frontend-web-admin/src/views/system/Notifications.vue -->
 <template>
   <div class="space-y-6">
     <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">

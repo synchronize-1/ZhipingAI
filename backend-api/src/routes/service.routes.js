@@ -1,4 +1,4 @@
-// backend-api/src/routes/service.js
+// backend-api/src/routes/service.routes.js
 const express = require('express');
 const router = express.Router();
 const Service = require('../models/Service.model');

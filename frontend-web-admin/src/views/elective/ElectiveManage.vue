@@ -297,7 +297,7 @@ import {
   Reading, Unlock, Select, UserFilled
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { electiveAPI } from '@/api/elective'
+import { electiveAPI } from '@/api/electives'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 const loading = ref(false)

@@ -19,13 +19,13 @@ const roleHomeComponent = computed(() => {
   
   switch (role) {
     case 'student':
-      return defineAsyncComponent(() => import('@/views/StudentHome.vue'))
+      return defineAsyncComponent(() => import('@/views/home/StudentHome.vue'))
     case 'teacher':
-      return defineAsyncComponent(() => import('@/views/TeacherHome.vue'))
+      return defineAsyncComponent(() => import('@/views/home/TeacherHome.vue'))
     case 'admin':
-      return defineAsyncComponent(() => import('@/views/AdminHome.vue'))
+      return defineAsyncComponent(() => import('@/views/home/AdminHome.vue'))
     default:
-      return defineAsyncComponent(() => import('@/views/StudentHome.vue'))
+      return defineAsyncComponent(() => import('@/views/home/StudentHome.vue'))
   }
 })
 </script>

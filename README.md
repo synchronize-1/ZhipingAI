@@ -49,7 +49,7 @@ SmartCampus-main/
 │       ├── layouts/                 # 布局
 │       ├── router/                  # 路由与权限守卫
 │       ├── stores/                  # Pinia 状态
-│       └── views/                   # 页面（teaching/ portfolio/ activity/ elective/）
+│       └── views/                   # 页面（home/ auth/ system/ course/ student/ teaching/ portfolio/ activity/ elective/）
 ├── mobile-app/                      # 移动端（uni-app），当前不在维护范围内
 ├── docs/                            # 项目文档
 └── datasets/                        # 数据集

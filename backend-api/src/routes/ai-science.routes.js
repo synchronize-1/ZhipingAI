@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const AIScienceService = require('../services/aiScienceService');
+const AIScienceService = require('../services/aiScience.service');
 
 /**
  * AI 对话 - 使用 DeepSeek

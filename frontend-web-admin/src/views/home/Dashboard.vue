@@ -1,4 +1,4 @@
-<!-- frontend-web-admin/src/views/Dashboard.vue -->
+<!-- frontend-web-admin/src/views/home/Dashboard.vue -->
 <template>
   <div class="dashboard-container">
     <!-- 顶部标题区域 -->
@@ -52,8 +52,8 @@ import { ref, onMounted, onUnmounted, onActivated } from 'vue'
 import { ElMessage } from 'element-plus'
 import { homeAPI } from '@/api/home'
 import { TrendCharts, Refresh, FullScreen, User, Avatar, Reading, Bell, Flag, Monitor, DataAnalysis } from '@element-plus/icons-vue'
-import AIHealthOverview from '@/views/AIHealthOverview.vue'
-import AIHealthAnalytics from '@/views/AIHealthAnalytics.vue'
+import AIHealthOverview from '@/views/home/AIHealthOverview.vue'
+import AIHealthAnalytics from '@/views/home/AIHealthAnalytics.vue'
 
 defineOptions({
   name: 'Dashboard'

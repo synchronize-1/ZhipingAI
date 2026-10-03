@@ -393,7 +393,7 @@ import {
   Plus, Search, RefreshLeft, Upload, School, Key, CopyDocument, Download, UploadFilled
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { adminUserAPI } from '@/api/adminUsers'
+import { adminUserAPI } from '@/api/admin-users'
 import { classAPI } from '@/api/teaching'
 import { useDialog } from '@/composables/useDialog'
 import PageHeader from '@/components/common/PageHeader.vue'

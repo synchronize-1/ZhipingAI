@@ -334,7 +334,7 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import SearchForm from '@/components/common/SearchForm.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import { useUserStore } from '@/stores/user'
-import { activityAPI } from '@/api/activity'
+import { activityAPI } from '@/api/activities'
 
 defineOptions({ name: 'ActivityCenter' })
 

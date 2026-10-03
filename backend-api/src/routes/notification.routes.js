@@ -1,4 +1,4 @@
-// backend-api/src/routes/notification.js
+// backend-api/src/routes/notification.routes.js
 const express = require('express');
 const router = express.Router();
 const { verifyToken, checkRole } = require('../middleware/auth');
