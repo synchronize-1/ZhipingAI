@@ -44,8 +44,8 @@ function errorHandler(err, req, res, next) {
   // 供审计中间件记录失败原因
   res.locals.errorMessage = message;
 
-  // 开发环境返回详细错误信息
-  if (process.env.NODE_ENV === 'development') {
+  // 仅开发环境且显式开启调试开关时，才返回详细错误与堆栈
+  if (process.env.NODE_ENV === 'development' && process.env.DEBUG_ERROR_STACK === 'true') {
     return res.status(statusCode).json({
       code: errorCode,
       message,

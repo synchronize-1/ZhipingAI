@@ -2,6 +2,7 @@ const XLSX = require('xlsx');
 const User = require('../models/User.model');
 const Class = require('../models/Class.model');
 const { ErrorCode } = require('../utils/response');
+const { withTransaction } = require('../utils/transaction');
 
 /**
  * 获取默认密码
@@ -460,7 +461,7 @@ class UserService {
         continue;
       }
 
-      // 创建用户
+      // 创建用户（创建与分配班级放在同一事务内，避免留下未分配班级的半条记录）
       try {
         const defaultPassword = getDefaultPassword(role, role === 'student' ? no : null, role === 'teacher' ? no : null);
 
@@ -477,12 +478,14 @@ class UserService {
           employeeId: role === 'teacher' ? no : null,
         };
 
-        const userId = await User.create(userData);
+        await withTransaction(async (conn) => {
+          const userId = await User.create(userData, conn);
 
-        // 如果是学生且有班级，分配班级
-        if (role === 'student' && classId) {
-          await User.update(userId, { class_id: classId });
-        }
+          // 如果是学生且有班级，分配班级
+          if (role === 'student' && classId) {
+            await User.update(userId, { class_id: classId }, conn);
+          }
+        });
 
         // 加入已存在集合，防止本批内重复
         importNoSet.add(no);
@@ -561,6 +564,79 @@ class UserService {
     const fileName = isStudent ? '学生导入模板.xlsx' : '教师导入模板.xlsx';
 
     return { buffer, fileName };
+  }
+
+  // ==================== 11. 个性化首页数据 ====================
+  static async getDashboard(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+      const error = new Error('用户不存在');
+      error.name = 'NotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    const pool = require('../config/database');
+    let dashboardData = {};
+
+    switch (user.role) {
+      case 'student': {
+        // 学生首页：课表、通知、待办
+        const Schedule = require('../models/Schedule.model');
+        const todaySchedule = await Schedule.getTodaySchedule(userId);
+
+        const [notifications] = await pool.execute(
+          'SELECT * FROM notifications WHERE user_id = ? OR target_role = ? ORDER BY created_at DESC LIMIT 5',
+          [userId, 'student']
+        );
+
+        const [todos] = await pool.execute(
+          'SELECT * FROM todos WHERE user_id = ? AND status != "completed" ORDER BY due_date LIMIT 5',
+          [userId]
+        );
+
+        dashboardData = { schedule: todaySchedule, notifications, todos };
+        break;
+      }
+
+      case 'teacher': {
+        // 教师首页：今日课程、待办、学生反馈
+        const teacherSchedule = await require('../models/Schedule.model').getByTeacherId(userId);
+
+        const [teacherTodos] = await pool.execute(
+          'SELECT * FROM todos WHERE user_id = ? AND status != "completed" ORDER BY due_date LIMIT 5',
+          [userId]
+        );
+
+        const [feedbacks] = await pool.execute(
+          'SELECT * FROM course_feedbacks WHERE teacher_id = ? ORDER BY created_at DESC LIMIT 5',
+          [userId]
+        );
+
+        dashboardData = { schedule: teacherSchedule, todos: teacherTodos, feedbacks };
+        break;
+      }
+
+      case 'admin': {
+        // 管理员首页：校园动态、统计数据
+        const [stats] = await pool.execute(`
+          SELECT 
+            (SELECT COUNT(*) FROM users WHERE role = 'student') as student_count,
+            (SELECT COUNT(*) FROM users WHERE role = 'teacher') as teacher_count,
+            (SELECT COUNT(*) FROM repairs WHERE status = 'pending') as pending_repairs,
+            (SELECT COUNT(*) FROM activities WHERE status = 'upcoming') as upcoming_activities
+        `);
+
+        const [recentLogs] = await pool.execute(
+          'SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 10'
+        );
+
+        dashboardData = { stats: stats[0], recentLogs };
+        break;
+      }
+    }
+
+    return dashboardData;
   }
 }
 

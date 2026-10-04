@@ -30,11 +30,15 @@ function auditLog(req, res, next) {
 
   res.on('finish', () => {
     // 此时路由中间件已执行完毕，req.user 可用
+    const url = req.originalUrl || req.url || '';
+    // 优先使用路由显式设置的目标类型，未设置时按模块兜底，保证每条写操作日志都有目标类型
+    const targetType = (res.locals && res.locals.targetType)
+      || OperationLogService.resolveModule(url.split('?')[0]);
     OperationLogService.record({
       req,
       res,
       durationMs: Date.now() - startAt,
-      targetType: res.locals ? res.locals.targetType : null
+      targetType
     }).catch(() => {
       /* record 内部已兜底 */
     });

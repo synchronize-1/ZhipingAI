@@ -3,11 +3,11 @@ const bcrypt = require('bcryptjs');
 
 class User {
   // 创建用户
-  static async create(userData) {
+  static async create(userData, conn = pool) {
     const { username, password, name, role, email, phone, avatar, department, studentId, employeeId } = userData;
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `INSERT INTO users (username, password, name, role, email, phone, avatar, department, student_id, employee_id, created_at) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [username, hashedPassword, name, role, email, phone, avatar, department, studentId, employeeId]
@@ -37,7 +37,7 @@ class User {
   }
 
   // 更新用户信息（支持更多字段）
-  static async update(id, userData) {
+  static async update(id, userData, conn = pool) {
     const fields = [];
     const params = [];
 
@@ -61,7 +61,7 @@ class User {
     fields.push('updated_at = NOW()');
     params.push(id);
 
-    await pool.execute(
+    await conn.execute(
       `UPDATE users SET ${fields.join(', ')} WHERE id = ?`,
       params
     );

@@ -8,6 +8,7 @@ const ExamScore = require('../models/ExamScore.model');
 const DeepSeekService = require('./deepseek.service');
 const NotificationService = require('./notification.service');
 const { ErrorCode } = require('../utils/response');
+const { withTransaction } = require('../utils/transaction');
 
 class TeachingService {
   // ==================== 考试管理 ====================
@@ -606,16 +607,18 @@ class TeachingService {
     // 为每条成绩添加 examId
     const scores = scoresData.map(s => ({ ...s, examId }));
 
-    // 批量插入/更新
-    const affectedRows = await ExamScore.batchCreate(scores);
+    // 批量插入/更新后重新计算排名，整体放在同一事务内，避免留下未排名的成绩
+    return withTransaction(async (conn) => {
+      const affectedRows = await ExamScore.batchCreate(scores, conn);
 
-    // 获取涉及的所有科目，重新计算排名
-    const subjectIds = [...new Set(scores.map(s => s.subjectId))];
-    for (const subjectId of subjectIds) {
-      await ExamScore.calculateRankings(examId, subjectId);
-    }
+      // 获取涉及的所有科目，重新计算排名
+      const subjectIds = [...new Set(scores.map(s => s.subjectId))];
+      for (const subjectId of subjectIds) {
+        await ExamScore.calculateRankings(examId, subjectId, conn);
+      }
 
-    return { affectedRows, subjectCount: subjectIds.length };
+      return { affectedRows, subjectCount: subjectIds.length };
+    });
   }
 
   // 从 rows 格式批量导入成绩（Excel 导入后的数据格式）
@@ -671,20 +674,22 @@ class TeachingService {
       throw error;
     }
 
-    // 批量插入/更新
-    const affectedRows = await ExamScore.batchCreate(scores);
+    // 批量插入/更新后重新计算排名，整体放在同一事务内，避免留下未排名的成绩
+    return withTransaction(async (conn) => {
+      const affectedRows = await ExamScore.batchCreate(scores, conn);
 
-    // 重新计算各科排名
-    const subjectIds = [...subjectIdsSet];
-    for (const subjectId of subjectIds) {
-      await ExamScore.calculateRankings(examId, subjectId);
-    }
+      // 重新计算各科排名
+      const subjectIds = [...subjectIdsSet];
+      for (const subjectId of subjectIds) {
+        await ExamScore.calculateRankings(examId, subjectId, conn);
+      }
 
-    return {
-      affectedRows,
-      subjectCount: subjectIds.length,
-      studentCount: rows.length
-    };
+      return {
+        affectedRows,
+        subjectCount: subjectIds.length,
+        studentCount: rows.length
+      };
+    });
   }
 
   // 获取班级成绩列表

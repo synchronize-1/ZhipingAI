@@ -27,7 +27,7 @@ class ExamScore {
   }
 
   // 批量创建成绩
-  static async batchCreate(scores) {
+  static async batchCreate(scores, conn = pool) {
     if (!scores || scores.length === 0) return 0;
 
     const values = [];
@@ -42,7 +42,7 @@ class ExamScore {
       );
     }
 
-    const [result] = await pool.execute(
+    const [result] = await conn.execute(
       `INSERT INTO exam_scores (exam_id, student_id, subject_id, class_id, score, score_level, is_absent, remark, created_at)
        VALUES ${placeholders.join(', ')}
        ON DUPLICATE KEY UPDATE
@@ -308,9 +308,9 @@ class ExamScore {
   }
 
   // 计算排名（班级排名、年级排名），更新到exam_scores表
-  static async calculateRankings(examId, subjectId) {
+  static async calculateRankings(examId, subjectId, conn = pool) {
     // 先获取所有成绩（非缺考），按分数降序排列
-    const [scores] = await pool.execute(
+    const [scores] = await conn.execute(
       `SELECT id, student_id, class_id, score
        FROM exam_scores
        WHERE exam_id = ? AND subject_id = ? AND is_absent = 0
@@ -365,7 +365,7 @@ class ExamScore {
     // 批量更新排名
     let updatedCount = 0;
     for (const s of scores) {
-      await pool.execute(
+      await conn.execute(
         `UPDATE exam_scores SET rank_in_class = ?, rank_in_grade = ?, updated_at = NOW() WHERE id = ?`,
         [classRanking[s.id] || null, gradeRanking[s.id] || null, s.id]
       );

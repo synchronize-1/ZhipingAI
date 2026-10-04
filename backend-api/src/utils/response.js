@@ -3,9 +3,19 @@ function success(res, data = null, message = 'success', code = 0) {
   return res.json({ code, data, message });
 }
 
+// 业务错误码 → HTTP 状态码
+function httpStatusFromCode(code) {
+  if (code >= 50000) return 500;
+  if (code >= 42900) return 429;
+  if (code >= 40400) return 404;
+  if (code >= 40300) return 403;
+  if (code >= 40100) return 401;
+  return 400;
+}
+
 // 失败响应
 function fail(res, message = '请求失败', code = 40000, data = null) {
-  return res.status(code >= 50000 ? 500 : 400).json({ code, data, message });
+  return res.status(httpStatusFromCode(code)).json({ code, data, message });
 }
 
 // 分页响应
@@ -33,4 +43,4 @@ const ErrorCode = {
   SERVICE_UNAVAILABLE: 50003
 };
 
-module.exports = { success, fail, paginate, ErrorCode };
+module.exports = { success, fail, paginate, ErrorCode, httpStatusFromCode };

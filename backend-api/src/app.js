@@ -27,16 +27,24 @@ const { globalRateLimit } = require('./middleware/rateLimit');
 const auditLog = require('./middleware/auditLog');
 
 const app = express();
+
+// CORS 允许来源：生产环境从环境变量读取，开发环境或未配置时保留宽松默认
+const corsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((item) => item.trim())
+  .filter(Boolean);
+const corsOrigin = process.env.NODE_ENV === 'production' && corsOrigins.length > 0 ? corsOrigins : '*';
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
+    origin: corsOrigin,
     methods: ['GET', 'POST']
   }
 });
 
 // 中间件
-app.use(cors());
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '50mb' })); // 增加请求体大小限制，支持大图片
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 

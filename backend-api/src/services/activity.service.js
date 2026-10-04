@@ -1,5 +1,6 @@
 const Activity = require('../models/Activity.model');
 const { ErrorCode } = require('../utils/response');
+const { withTransaction } = require('../utils/transaction');
 
 // 活动类型（与前端下拉保持一致）
 const CATEGORIES = ['文艺', '学术', '体育', '公益', '社团', '就业', '其他'];
@@ -180,21 +181,26 @@ class ActivityService {
     if (activity.status === 'completed') throw validationError('活动已结束，无法报名');
     if (activity.status === 'ongoing') throw validationError('活动已开始，无法报名');
 
-    const existing = await Activity.findRegistration(activityId, user.id);
-    if (existing && existing.status !== 'cancelled') {
-      throw validationError('您已报名该活动');
-    }
+    // 名额校验与写入放在同一事务内，并对活动行加锁，避免并发超额报名
+    await withTransaction(async (conn) => {
+      await Activity.lockById(activityId, conn);
 
-    const count = await Activity.countRegistrations(activityId);
-    if (activity.maxParticipants != null && count >= Number(activity.maxParticipants)) {
-      throw validationError('活动名额已满');
-    }
+      const existing = await Activity.findRegistration(activityId, user.id, conn);
+      if (existing && existing.status !== 'cancelled') {
+        throw validationError('您已报名该活动');
+      }
 
-    if (existing) {
-      await Activity.reactivateRegistration(existing.id);
-    } else {
-      await Activity.createRegistration(activityId, user.id);
-    }
+      const count = await Activity.countRegistrations(activityId, conn);
+      if (activity.maxParticipants != null && count >= Number(activity.maxParticipants)) {
+        throw validationError('活动名额已满');
+      }
+
+      if (existing) {
+        await Activity.reactivateRegistration(existing.id, null, conn);
+      } else {
+        await Activity.createRegistration(activityId, user.id, null, conn);
+      }
+    });
 
     return this.detail(activityId, user);
   }

@@ -182,24 +182,24 @@ class ElectiveCourse {
 
   // ==================== 选课记录 ====================
 
-  static async countSelected(courseId) {
-    const [[row]] = await pool.execute(
+  static async countSelected(courseId, conn = pool) {
+    const [[row]] = await conn.execute(
       "SELECT COUNT(*) AS c FROM elective_selections WHERE course_id = ? AND status = 'selected'",
       [courseId]
     );
     return Number(row.c) || 0;
   }
 
-  static async findSelection(courseId, studentId) {
-    const [rows] = await pool.execute(
+  static async findSelection(courseId, studentId, conn = pool) {
+    const [rows] = await conn.execute(
       'SELECT * FROM elective_selections WHERE course_id = ? AND student_id = ?',
       [courseId, studentId]
     );
     return rows[0];
   }
 
-  static async createSelection(courseId, studentId, remark = null) {
-    const [result] = await pool.execute(
+  static async createSelection(courseId, studentId, remark = null, conn = pool) {
+    const [result] = await conn.execute(
       `INSERT INTO elective_selections (course_id, student_id, status, selected_at, remark)
        VALUES (?, ?, 'selected', NOW(), ?)`,
       [courseId, studentId, remark]
@@ -207,13 +207,22 @@ class ElectiveCourse {
     return result.insertId;
   }
 
-  static async reactivateSelection(id, remark = null) {
-    await pool.execute(
+  static async reactivateSelection(id, remark = null, conn = pool) {
+    await conn.execute(
       `UPDATE elective_selections
           SET status = 'selected', selected_at = NOW(), dropped_at = NULL, remark = ?
         WHERE id = ?`,
       [remark, id]
     );
+  }
+
+  // 事务内锁定课程行，串行化同一课程的并发选课，保证名额判断准确
+  static async lockById(id, conn = pool) {
+    const [rows] = await conn.execute(
+      'SELECT id FROM elective_courses WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    return rows[0];
   }
 
   static async dropSelection(courseId, studentId) {

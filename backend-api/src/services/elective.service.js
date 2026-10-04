@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const ElectiveCourse = require('../models/ElectiveCourse.model');
 const { ErrorCode } = require('../utils/response');
+const { withTransaction } = require('../utils/transaction');
 
 const CATEGORIES = ['人文社科', '自然科学', '艺术体育', '信息技术', '语言文化', '实践技能', '其他'];
 const STATUSES = ['draft', 'open', 'closed'];
@@ -296,21 +297,26 @@ class ElectiveService {
       }
     }
 
-    const existing = await ElectiveCourse.findSelection(courseId, user.id);
-    if (existing && existing.status === 'selected') {
-      throw validationError('您已选修该课程');
-    }
+    // 名额校验与写入放在同一事务内，并对课程行加锁，避免并发超选
+    await withTransaction(async (conn) => {
+      await ElectiveCourse.lockById(courseId, conn);
 
-    const count = await ElectiveCourse.countSelected(courseId);
-    if (count >= Number(course.capacity)) {
-      throw validationError('该课程名额已满');
-    }
+      const existing = await ElectiveCourse.findSelection(courseId, user.id, conn);
+      if (existing && existing.status === 'selected') {
+        throw validationError('您已选修该课程');
+      }
 
-    if (existing) {
-      await ElectiveCourse.reactivateSelection(existing.id);
-    } else {
-      await ElectiveCourse.createSelection(courseId, user.id);
-    }
+      const count = await ElectiveCourse.countSelected(courseId, conn);
+      if (count >= Number(course.capacity)) {
+        throw validationError('该课程名额已满');
+      }
+
+      if (existing) {
+        await ElectiveCourse.reactivateSelection(existing.id, null, conn);
+      } else {
+        await ElectiveCourse.createSelection(courseId, user.id, null, conn);
+      }
+    });
 
     return this.detail(courseId, user);
   }

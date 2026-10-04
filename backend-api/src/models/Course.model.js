@@ -14,6 +14,28 @@ class Course {
     return result.insertId;
   }
 
+  // 获取所有学期列表
+  static async getSemesters() {
+    const [rows] = await pool.execute(`
+      SELECT DISTINCT semester
+      FROM courses
+      WHERE semester IS NOT NULL AND semester != ''
+      ORDER BY semester DESC
+    `);
+    return rows.map(row => row.semester);
+  }
+
+  // 获取所有教师名称（取自 courses 表的唯一教师名，而非注册用户表）
+  static async getTeacherNames() {
+    const [rows] = await pool.execute(`
+      SELECT DISTINCT teacher_name as name
+      FROM courses
+      WHERE teacher_name IS NOT NULL AND teacher_name != ''
+      ORDER BY teacher_name
+    `);
+    return rows.map(row => row.name);
+  }
+
   // 获取课程详情
   static async findById(id) {
     const [rows] = await pool.execute('SELECT * FROM courses WHERE id = ?', [id]);

@@ -1,25 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const AIScienceService = require('../services/aiScience.service');
+const { verifyToken } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
+const { success, fail, ErrorCode } = require('../utils/response');
 
 /**
  * AI 对话 - 使用 DeepSeek
  * POST /api/ai-science/chat
  * 供全局 AI 助手（components/AIAssistant.vue、AIAssistantFloat.vue）调用
  */
-router.post('/chat', async (req, res) => {
+router.post('/chat', verifyToken, validate({
+  body: {
+    message: { required: true, type: 'string', min: 1, max: 4000 }
+  }
+}), async (req, res) => {
   try {
     const { message, history, systemPrompt } = req.body;
 
-    if (!message) {
-      return res.status(400).json({ success: false, message: '消息不能为空' });
+    const result = await AIScienceService.chat(message, history, systemPrompt);
+    if (!result.success) {
+      return fail(res, result.message || 'AI对话服务暂时不可用', ErrorCode.SERVICE_UNAVAILABLE);
     }
 
-    const result = await AIScienceService.chat(message, history, systemPrompt);
-    res.json(result);
+    return success(res, result.data);
   } catch (error) {
     console.error('AI对话错误:', error);
-    res.status(500).json({ success: false, message: '服务器错误' });
+    return fail(res, '服务器错误', ErrorCode.SERVER_ERROR);
   }
 });
 

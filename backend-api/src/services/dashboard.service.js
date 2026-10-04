@@ -130,7 +130,8 @@ class DashboardService {
     `, [teacherId]);
 
     const classIds = teacherClasses.map(c => c.classId);
-    const classIdsStr = classIds.length > 0 ? classIds.join(',') : '0';
+    // 按数量生成占位符，值全部走参数绑定，避免把拼接结果带进外部输入
+    const classPlaceholders = classIds.length > 0 ? classIds.map(() => '?').join(', ') : '0';
 
     // 2. 任教班级数
     const classCount = classIds.length;
@@ -139,16 +140,16 @@ class DashboardService {
     const [studentCountRows] = await pool.query(`
       SELECT COUNT(*) as studentCount
       FROM users u
-      WHERE u.role = 'student' AND u.class_id IN (${classIdsStr})
-    `);
+      WHERE u.role = 'student' AND u.class_id IN (${classPlaceholders})
+    `, [...classIds]);
     const studentCount = studentCountRows[0]?.studentCount || 0;
 
     // 4. 相关考试数（任教班级参与过的考试）
     const [examCountRows] = await pool.query(`
       SELECT COUNT(DISTINCT es.exam_id) as examCount
       FROM exam_scores es
-      WHERE es.class_id IN (${classIdsStr})
-    `);
+      WHERE es.class_id IN (${classPlaceholders})
+    `, [...classIds]);
     const examCount = examCountRows[0]?.examCount || 0;
 
     // 5. 待写评语数（本学期任教班级学生中还没有评语的数量）
@@ -158,13 +159,13 @@ class DashboardService {
       SELECT COUNT(*) as pendingComments
       FROM users u
       WHERE u.role = 'student'
-        AND u.class_id IN (${classIdsStr})
+        AND u.class_id IN (${classPlaceholders})
         AND u.id NOT IN (
           SELECT pc.student_id
           FROM portfolio_comments pc
           WHERE pc.semester = ? AND pc.comment_type = 'general'
         )
-    `, [currentSemester]);
+    `, [...classIds, currentSemester]);
     const pendingComments = pendingCommentsRows[0]?.pendingComments || 0;
 
     // 6. 我任教的班级列表（含班主任姓名、学生数）
@@ -177,9 +178,9 @@ class DashboardService {
         u.name as headTeacherName
       FROM classes c
       LEFT JOIN users u ON u.id = c.head_teacher_id
-      WHERE c.id IN (${classIdsStr})
+      WHERE c.id IN (${classPlaceholders})
       ORDER BY c.grade, c.name
-    `);
+    `, [...classIds]);
 
     // 7. 最近3次我班级参与的考试
     const [recentExams] = await pool.query(`
@@ -192,10 +193,10 @@ class DashboardService {
         e.created_at
       FROM exams e
       INNER JOIN exam_scores es ON es.exam_id = e.id
-      WHERE es.class_id IN (${classIdsStr})
+      WHERE es.class_id IN (${classPlaceholders})
       ORDER BY e.exam_date DESC, e.created_at DESC
       LIMIT 3
-    `);
+    `, [...classIds]);
 
     // 8. 最近一次考试的班级成绩概览
     let recentScores = [];
@@ -205,10 +206,10 @@ class DashboardService {
         SELECT DISTINCT e.id as examId, e.name as examName, e.exam_date as examDate, e.created_at
         FROM exams e
         INNER JOIN exam_scores es ON es.exam_id = e.id
-        WHERE es.class_id IN (${classIdsStr})
+        WHERE es.class_id IN (${classPlaceholders})
         ORDER BY e.exam_date DESC, e.created_at DESC
         LIMIT 1
-      `);
+      `, [...classIds]);
 
       if (latestExamRows.length > 0) {
         const latestExamId = latestExamRows[0].examId;
@@ -222,10 +223,10 @@ class DashboardService {
             MIN(es.score) as minScore
           FROM exam_scores es
           INNER JOIN classes c ON c.id = es.class_id
-          WHERE es.exam_id = ? AND es.class_id IN (${classIdsStr})
+          WHERE es.exam_id = ? AND es.class_id IN (${classPlaceholders})
           GROUP BY es.class_id
           ORDER BY avgScore DESC
-        `, [latestExamId]);
+        `, [latestExamId, ...classIds]);
 
         recentScores = scoreStats.map(s => ({
           examId: latestExamId,

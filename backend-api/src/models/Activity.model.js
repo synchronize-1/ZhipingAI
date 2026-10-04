@@ -166,24 +166,24 @@ class Activity {
 
   // ==================== 报名 ====================
 
-  static async countRegistrations(activityId) {
-    const [[row]] = await pool.execute(
+  static async countRegistrations(activityId, conn = pool) {
+    const [[row]] = await conn.execute(
       "SELECT COUNT(*) AS c FROM activity_registrations WHERE activity_id = ? AND status <> 'cancelled'",
       [activityId]
     );
     return Number(row.c) || 0;
   }
 
-  static async findRegistration(activityId, userId) {
-    const [rows] = await pool.execute(
+  static async findRegistration(activityId, userId, conn = pool) {
+    const [rows] = await conn.execute(
       'SELECT * FROM activity_registrations WHERE activity_id = ? AND user_id = ?',
       [activityId, userId]
     );
     return rows[0];
   }
 
-  static async createRegistration(activityId, userId, remark = null) {
-    const [result] = await pool.execute(
+  static async createRegistration(activityId, userId, remark = null, conn = pool) {
+    const [result] = await conn.execute(
       `INSERT INTO activity_registrations (activity_id, user_id, status, registered_at, remark)
        VALUES (?, ?, 'registered', NOW(), ?)`,
       [activityId, userId, remark]
@@ -191,13 +191,22 @@ class Activity {
     return result.insertId;
   }
 
-  static async reactivateRegistration(id, remark = null) {
-    await pool.execute(
+  static async reactivateRegistration(id, remark = null, conn = pool) {
+    await conn.execute(
       `UPDATE activity_registrations
           SET status = 'registered', registered_at = NOW(), checked_in_at = NULL, remark = ?
         WHERE id = ?`,
       [remark, id]
     );
+  }
+
+  // 事务内锁定活动行，串行化同一活动的并发报名，保证名额判断准确
+  static async lockById(id, conn = pool) {
+    const [rows] = await conn.execute(
+      'SELECT id FROM activities WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    return rows[0];
   }
 
   static async cancelRegistration(activityId, userId) {
