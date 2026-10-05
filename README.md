@@ -44,12 +44,16 @@ SmartCampus-main/
 ├── frontend-web-admin/              # Web 管理前端
 │   └── src/
 │       ├── api/                     # API 调用层
-│       ├── components/              # 公共组件与业务组件
+│       ├── components/              # 跨域公共组件（common/ 通用件、ai-assistant/ AI 聊天块）
 │       ├── composables/             # 组合式函数（useTable / useDialog / useECharts 等）
+│       ├── i18n/                    # 国际化（locales/）
 │       ├── layouts/                 # 布局
 │       ├── router/                  # 路由与权限守卫
 │       ├── stores/                  # Pinia 状态
-│       └── views/                   # 页面（home/ auth/ system/ course/ student/ teaching/ portfolio/ activity/ elective/）
+│       ├── styles/                  # 全局样式
+│       ├── utils/                   # 工具函数（exportPdf 等）
+│       └── views/                   # 页面，按业务域内聚（域内含 components/、utils/、use*.js）
+│           └── home/ auth/ system/ course/ student/ teaching/ portfolio/ activity/ elective/
 ├── mobile-app/                      # 移动端（uni-app），当前不在维护范围内
 ├── docs/                            # 项目文档
 └── datasets/                        # 数据集
@@ -211,7 +215,7 @@ Model (models/)        → 数据库 CRUD、SQL 查询
 - 数据库迁移：`migrations/` 下的版本化 SQL（`V*.up.sql` / `V*.down.sql`），由 `index.js` 驱动、`runSql.js` 执行
 - 权限控制：JWT + 三角色分级（admin / teacher / student）
 
-> 说明：部分早期模块（`/api/auth`、`/api/users`、`/api/courses`、`/api/social`、`/api/services`、`/api/ai-science`、`/api/ai-health`）仍使用 `{ success, data, message }` 信封，并存在路由层内联业务逻辑的情况。前端请求层已兼容两种信封。相关收敛工作记录在 [项目优化计划](docs/项目优化计划.md)。
+> 说明：全部 HTTP 接口已统一为 `{ code, data, message }` 信封（成功码 `0`），由 `utils/response.js` 与 `middleware/errorHandler.js` 统一出口；早期路由层内联的业务逻辑已下沉到 `services/`。前端请求层对历史信封格式仍做兼容。相关收敛工作记录在 [项目优化计划](docs/项目优化计划.md)。
 
 ## API 文档
 

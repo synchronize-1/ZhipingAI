@@ -60,7 +60,7 @@
 
 <script setup>
 import { useStudentHome } from './useStudentHome'
-import AIAssistantFloat from '@/components/AIAssistantFloat.vue'
+import AIAssistantFloat from './components/AIAssistantFloat.vue'
 import StudentWelcomeBanner from './components/StudentWelcomeBanner.vue'
 import StudentTodayCourses from './components/StudentTodayCourses.vue'
 import StudentTodoCard from './components/StudentTodoCard.vue'

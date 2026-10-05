@@ -68,7 +68,7 @@ Authorization: Bearer <token>
 | data | Any | 响应数据 |
 | message | String | 响应消息 |
 
-早期模块（`auth` / `users` / `courses` / `services` / `social` / `ai-science` / `ai-health`）沿用 `{ success, data, message }` 结构，`success: true` 表示成功。本文档在各接口处标注其实际返回结构。
+全部接口统一使用 `{ code, data, message }` 结构，`code: 0` 表示成功，非 0 为业务错误码（对应 HTTP 400/401/403/404/429/500）。
 
 ### 分页响应格式
 
@@ -119,7 +119,7 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "success": true,
+  "code": 0,
   "message": "登录成功",
   "data": {
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -178,7 +178,7 @@ Authorization: Bearer <token>
 
 **请求头：** 需要认证
 
-**响应：** `{ "success": true, "data": { "token": "..." }, "message": "..." }`
+**响应：** `{ "code": 0, "data": { "token": "..." }, "message": "success" }`
 
 ---
 
@@ -1059,7 +1059,7 @@ Authorization: Bearer <token>
 
 ## 用户管理模块
 
-> 该模块沿用 `{ success, data, message }` 响应结构。
+> 该模块使用统一响应结构 `{ code, data, message }`。
 
 ### 获取用户列表
 
@@ -1226,7 +1226,7 @@ Authorization: Bearer <token>
 
 ## 课程模块
 
-> 该模块沿用 `{ success, data, message }` 响应结构。
+> 该模块使用统一响应结构 `{ code, data, message }`。
 
 ### 获取学期列表
 
@@ -1627,7 +1627,7 @@ Authorization: Bearer <token>
 
 ## 社交模块
 
-> 该模块沿用 `{ success, data, message }` 响应结构。
+> 该模块使用统一响应结构 `{ code, data, message }`。
 
 ### 获取活动列表
 
@@ -1704,7 +1704,7 @@ Authorization: Bearer <token>
 
 ## 校园服务模块
 
-> 该模块沿用 `{ success, data, message }` 响应结构。
+> 该模块使用统一响应结构 `{ code, data, message }`。
 
 ### 查询空闲教室
 
@@ -1888,7 +1888,7 @@ Authorization: Bearer <token>
 
 ## AI 健康分析模块
 
-> 该模块沿用 `{ success, data, message }` 响应结构。全部接口需要认证且角色为 `admin`。
+> 该模块使用统一响应结构 `{ code, data, message }`。全部接口需要认证且角色为 `admin`。
 
 ### 获取总览数据
 
@@ -1938,7 +1938,7 @@ Authorization: Bearer <token>
 
 ## AI 对话模块
 
-> 该模块沿用 `{ success, data, message }` 响应结构。
+> 该模块使用统一响应结构 `{ code, data, message }`。
 
 ### AI 对话
 
