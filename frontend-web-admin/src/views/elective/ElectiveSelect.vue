@@ -33,14 +33,14 @@
       <el-tab-pane label="课程广场" name="plaza">
         <el-card class="toolbar-card" shadow="never">
           <div class="toolbar">
-            <el-select v-model="query.semester" placeholder="全部学期" clearable style="width: 180px" @change="reload">
+            <el-select v-model="searchParams.semester" placeholder="全部学期" clearable style="width: 180px" @change="reload">
               <el-option v-for="s in semesters" :key="s" :label="s" :value="s" />
             </el-select>
-            <el-select v-model="query.category" placeholder="全部类别" clearable style="width: 160px" @change="reload">
+            <el-select v-model="searchParams.category" placeholder="全部类别" clearable style="width: 160px" @change="reload">
               <el-option v-for="c in categories" :key="c" :label="c" :value="c" />
             </el-select>
             <el-input
-              v-model="query.keyword"
+              v-model="searchParams.keyword"
               placeholder="搜索课程名称 / 编号"
               clearable
               style="width: 240px"
@@ -117,14 +117,14 @@
 
         <el-empty v-if="!loading && !list.length" description="暂无可选课程" />
 
-        <div v-if="total > query.pageSize" class="pagination">
+        <div v-if="pagination.total > pagination.pageSize" class="pagination">
           <el-pagination
-            v-model:current-page="query.page"
-            :page-size="query.pageSize"
-            :total="total"
+            v-model:current-page="pagination.page"
+            :page-size="pagination.pageSize"
+            :total="pagination.total"
             layout="prev, pager, next"
             background
-            @current-change="loadList"
+            @current-change="handlePageChange"
           />
         </div>
       </el-tab-pane>
@@ -190,15 +190,31 @@ import { Plus, Remove, Refresh, Search, Select, Medal, User, Clock, Location } f
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { electiveAPI } from '@/api/electives'
 import PageHeader from '@/components/common/PageHeader.vue'
+import { useTable } from '@/composables/useTable'
 
 const activeTab = ref('plaza')
-const loading = ref(false)
-const list = ref([])
-const total = ref(0)
-const query = ref({ page: 1, pageSize: 12, semester: '', category: '', keyword: '' })
 const semesters = ref([])
 const categories = ref([])
 const my = ref({ list: [], selectedCount: 0, totalCredit: 0 })
+
+// 课程广场：分页 / 筛选统一由 useTable 承担
+const fetchCourses = (params) => {
+  const cleaned = {}
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== undefined && v !== null) cleaned[k] = v
+  })
+  return electiveAPI.list(cleaned)
+}
+const {
+  loading,
+  dataList: list,
+  pagination,
+  searchParams,
+  fetchData: loadList,
+  handleSearch: reload,
+  handlePageChange
+} = useTable(fetchCourses, { semester: '', category: '', keyword: '' })
+pagination.pageSize = 12
 
 const capacityPercent = (course) => {
   if (!course.capacity) return 0
@@ -209,26 +225,6 @@ function selectButtonText(course) {
   if (course.isFull) return '名额已满'
   if (!course.withinWindow) return '不在选课时间'
   return '选课'
-}
-
-async function loadList() {
-  loading.value = true
-  try {
-    const params = {
-      page: query.value.page,
-      pageSize: query.value.pageSize,
-      semester: query.value.semester || undefined,
-      category: query.value.category || undefined,
-      keyword: query.value.keyword || undefined
-    }
-    const res = await electiveAPI.list(params)
-    list.value = res.data?.list || []
-    total.value = res.data?.total || 0
-  } catch (error) {
-    /* 拦截器已提示 */
-  } finally {
-    loading.value = false
-  }
 }
 
 async function loadMy() {
@@ -248,11 +244,6 @@ async function loadFilters() {
   } catch (error) {
     /* 拦截器已提示 */
   }
-}
-
-function reload() {
-  query.value.page = 1
-  loadList()
 }
 
 async function refreshAll() {
@@ -306,7 +297,8 @@ async function handleDropById(row) {
 
 onMounted(async () => {
   await loadFilters()
-  await refreshAll()
+  // 课程广场列表由 useTable 在挂载时自动加载
+  await loadMy()
 })
 </script>
 

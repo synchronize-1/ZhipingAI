@@ -205,11 +205,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Bell, Reading, Flag, Warning, Delete, Promotion, UserFilled, User, Avatar, Setting, Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { notificationAPI } from '@/api/notifications'
+import { useTable } from '@/composables/useTable'
 import dayjs from 'dayjs'
 
 defineOptions({ name: 'Notifications' })
@@ -225,13 +226,8 @@ const roleFilter = ref('all')
 // 类型筛选器（全部 / 系统 / 教学 / 活动 / 选课 / 紧急）
 const typeFilter = ref('')
 
-// 通知数据
-const loading = ref(false)
-const notifications = ref([])
+// 通知数据（列表 / 分页 / 加载状态统一由 useTable 承担，unreadCount 为派生计数）
 const unreadCount = ref(0)
-const currentPage = ref(1)
-const pageSize = ref(20)
-const total = ref(0)
 
 // 发布通知相关
 const showPublishDialog = ref(false)
@@ -320,29 +316,37 @@ const filterByRole = (notification) => {
   return targetRole === 'all'
 }
 
-// 获取通知列表
-const fetchNotifications = async () => {
-  loading.value = true
+// 通知列表：分页 / 加载状态统一由 useTable 承担
+const fetchNotifications = async (params) => {
   try {
     const res = await notificationAPI.list({
-      page: currentPage.value,
-      limit: pageSize.value,
+      page: params.page,
+      limit: params.pageSize,
       type: typeFilter.value || undefined
     })
     if (res.success) {
-      let data = res.data.notifications || []
-      // 前端过滤（用于角色筛选）
-      notifications.value = data.filter(filterByRole)
       unreadCount.value = res.data.unreadCount || 0
-      total.value = res.data.total || data.length
+      const data = res.data.notifications || []
+      // 前端过滤（用于角色筛选）
+      return { data: { data: data.filter(filterByRole), total: res.data.total || data.length } }
     }
+    // 非成功响应不改变现有列表
+    return { data: {} }
   } catch (e) {
     console.error('获取通知列表失败:', e)
     ElMessage.error('获取通知列表失败')
-  } finally {
-    loading.value = false
+    // 出错时保留现有列表
+    return { data: {} }
   }
 }
+
+const {
+  loading,
+  dataList: notifications,
+  pagination,
+  fetchData: loadNotifications
+} = useTable(fetchNotifications, {})
+pagination.pageSize = 20
 
 // 标记已读
 const markRead = async (notification) => {
@@ -416,7 +420,7 @@ const publishNotification = async () => {
       publishFormRef.value.resetFields()
 
       // 刷新列表
-      await fetchNotifications()
+      await loadNotifications()
     } catch (error) {
       console.error('发布通知失败:', error)
       ElMessage.error('发布通知失败，请重试')
@@ -426,41 +430,33 @@ const publishNotification = async () => {
   })
 }
 
-// 监听筛选器变化
-const handleFilterChange = () => {
-  fetchNotifications()
+// 筛选器变化或外部事件触发时重新拉取（useTable 已在挂载时自动加载）
+const reload = () => {
+  loadNotifications()
 }
 
 // 定时刷新（可选）
 let refreshInterval = null
 
 onMounted(() => {
-  fetchNotifications()
   // 收到实时通知时刷新列表
-  window.addEventListener('app-notification', fetchNotifications)
+  window.addEventListener('app-notification', reload)
   // 每30秒自动刷新一次
-  refreshInterval = setInterval(() => {
-    fetchNotifications()
-  }, 30000)
+  refreshInterval = setInterval(reload, 30000)
 })
 
 onUnmounted(() => {
   if (refreshInterval) {
     clearInterval(refreshInterval)
   }
-  window.removeEventListener('app-notification', fetchNotifications)
+  window.removeEventListener('app-notification', reload)
 })
 
 // 监听角色筛选变化
-import { watch } from 'vue'
-watch(roleFilter, () => {
-  fetchNotifications()
-})
+watch(roleFilter, reload)
 
 // 监听类型筛选变化
-watch(typeFilter, () => {
-  fetchNotifications()
-})
+watch(typeFilter, reload)
 </script>
 
 <style scoped>

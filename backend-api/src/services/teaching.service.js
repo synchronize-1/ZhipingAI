@@ -117,38 +117,6 @@ class TeachingService {
 
   // ==================== 成绩管理 ====================
 
-  // 批量导入成绩，自动计算排名和等级
-  static async importScores(examId, scoresData) {
-    const exam = await Exam.findById(examId);
-    if (!exam) {
-      const error = new Error('考试不存在');
-      error.name = 'NotFoundError';
-      error.status = 404;
-      throw error;
-    }
-
-    if (!Array.isArray(scoresData) || scoresData.length === 0) {
-      const error = new Error('成绩数据不能为空');
-      error.name = 'ValidationError';
-      error.code = ErrorCode.PARAM_VALIDATION;
-      throw error;
-    }
-
-    // 为每条成绩添加 examId
-    const scores = scoresData.map(s => ({ ...s, examId }));
-
-    // 批量插入/更新
-    const affectedRows = await ExamScore.batchCreate(scores);
-
-    // 获取涉及的所有科目，重新计算排名
-    const subjectIds = [...new Set(scores.map(s => s.subjectId))];
-    for (const subjectId of subjectIds) {
-      await ExamScore.calculateRankings(examId, subjectId);
-    }
-
-    return { affectedRows, subjectCount: subjectIds.length };
-  }
-
   // 成绩发布后向该班级学生推送通知；通知失败不阻断导入主流程
   static async notifyScorePublished(examId, classId, createdBy) {
     if (!classId) return;

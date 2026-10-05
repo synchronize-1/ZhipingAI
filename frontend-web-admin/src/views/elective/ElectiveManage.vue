@@ -27,19 +27,19 @@
     <!-- 筛选 -->
     <el-card class="toolbar-card" shadow="never">
       <div class="toolbar">
-        <el-select v-model="query.semester" placeholder="全部学期" clearable style="width: 180px" @change="reload">
+        <el-select v-model="searchParams.semester" placeholder="全部学期" clearable style="width: 180px" @change="reload">
           <el-option v-for="s in options.semesters" :key="s" :label="s" :value="s" />
         </el-select>
-        <el-select v-model="query.status" placeholder="全部状态" clearable style="width: 150px" @change="reload">
+        <el-select v-model="searchParams.status" placeholder="全部状态" clearable style="width: 150px" @change="reload">
           <el-option label="草稿" value="draft" />
           <el-option label="开放选课" value="open" />
           <el-option label="已关闭" value="closed" />
         </el-select>
-        <el-select v-model="query.grade" placeholder="全部年级" clearable style="width: 150px" @change="reload">
+        <el-select v-model="searchParams.grade" placeholder="全部年级" clearable style="width: 150px" @change="reload">
           <el-option v-for="g in options.grades" :key="g" :label="g" :value="g" />
         </el-select>
         <el-input
-          v-model="query.keyword"
+          v-model="searchParams.keyword"
           placeholder="搜索课程名称 / 编号"
           clearable
           style="width: 240px"
@@ -110,14 +110,14 @@
 
       <div class="pagination">
         <el-pagination
-          v-model:current-page="query.page"
-          v-model:page-size="query.pageSize"
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.pageSize"
           :page-sizes="[10, 20, 50]"
-          :total="total"
+          :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper"
           background
-          @current-change="loadList"
-          @size-change="reload"
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
         />
       </div>
     </el-card>
@@ -125,7 +125,7 @@
     <!-- 发布 / 编辑弹窗 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogMode === 'create' ? '发布选修课' : '编辑选修课'"
+      :title="dialogTitle"
       width="720px"
       :close-on-click-modal="false"
     >
@@ -299,13 +299,30 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { electiveAPI } from '@/api/electives'
 import PageHeader from '@/components/common/PageHeader.vue'
+import { useTable } from '@/composables/useTable'
+import { useDialog } from '@/composables/useDialog'
 
-const loading = ref(false)
-const list = ref([])
-const total = ref(0)
-const query = ref({ page: 1, pageSize: 10, semester: '', status: '', grade: '', keyword: '' })
 const options = ref({ semesters: [], subjects: [], teachers: [], grades: [], categories: [] })
 const stats = ref({ total: 0, open: 0, draft: 0, closed: 0, totalCapacity: 0, selections: 0 })
+
+// 列表：分页 / 筛选统一由 useTable 承担
+const fetchList = (params) => {
+  const cleaned = {}
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== undefined && v !== null) cleaned[k] = v
+  })
+  return electiveAPI.list(cleaned)
+}
+const {
+  loading,
+  dataList: list,
+  pagination,
+  searchParams,
+  fetchData: loadList,
+  handleSearch: reload,
+  handlePageChange,
+  handleSizeChange
+} = useTable(fetchList, { semester: '', status: '', grade: '', keyword: '' })
 
 const statCards = computed(() => [
   { label: '选修课总数', value: stats.value.total, icon: Reading, bg: 'linear-gradient(135deg,#667eea,#764ba2)' },
@@ -358,43 +375,12 @@ async function loadOptions() {
   }
 }
 
-async function loadList() {
-  loading.value = true
-  try {
-    const params = {
-      page: query.value.page,
-      pageSize: query.value.pageSize,
-      semester: query.value.semester || undefined,
-      status: query.value.status || undefined,
-      grade: query.value.grade || undefined,
-      keyword: query.value.keyword || undefined
-    }
-    const res = await electiveAPI.list(params)
-    list.value = res.data?.list || []
-    total.value = res.data?.total || 0
-  } catch (error) {
-    /* 拦截器已提示 */
-  } finally {
-    loading.value = false
-  }
-}
-
-function reload() {
-  query.value.page = 1
-  loadList()
-}
-
 async function refreshAll() {
   await Promise.all([loadOptions(), loadStats(), loadList()])
 }
 
 // ---------- 表单 ----------
-const dialogVisible = ref(false)
-const dialogMode = ref('create')
-const submitting = ref(false)
-const formRef = ref(null)
-
-const defaultForm = () => ({
+const electiveDialog = useDialog({
   id: null,
   name: '',
   code: '',
@@ -412,7 +398,13 @@ const defaultForm = () => ({
   status: 'draft',
   description: ''
 })
-const form = ref(defaultForm())
+const dialogVisible = electiveDialog.visible
+const dialogMode = electiveDialog.mode
+const submitting = electiveDialog.loading
+const formRef = electiveDialog.formRef
+const form = electiveDialog.formData
+const isEdit = computed(() => dialogMode.value === 'edit')
+const dialogTitle = computed(() => (isEdit.value ? '编辑选修课' : '发布选修课'))
 
 const formRules = {
   name: [{ required: true, message: '请填写课程名称', trigger: 'blur' }],
@@ -421,17 +413,13 @@ const formRules = {
 }
 
 function openCreate() {
-  dialogMode.value = 'create'
-  form.value = defaultForm()
-  if (!form.value.semester && options.value.semesters?.length) {
-    form.value.semester = options.value.semesters[0]
-  }
-  dialogVisible.value = true
+  electiveDialog.openAdd({
+    semester: options.value.semesters?.length ? options.value.semesters[0] : ''
+  })
 }
 
 function openEdit(row) {
-  dialogMode.value = 'edit'
-  form.value = {
+  electiveDialog.openEdit({
     id: row.id,
     name: row.name,
     code: row.code || '',
@@ -448,8 +436,7 @@ function openEdit(row) {
     selectEnd: row.selectEnd || '',
     status: row.status,
     description: row.description || ''
-  }
-  dialogVisible.value = true
+  })
 }
 
 async function handleSubmit() {
@@ -462,16 +449,16 @@ async function handleSubmit() {
   }
   submitting.value = true
   try {
-    const payload = { ...form.value }
+    const payload = { ...form }
     delete payload.id
-    if (dialogMode.value === 'create') {
+    if (!isEdit.value) {
       await electiveAPI.create(payload)
       ElMessage.success('选修课已发布')
     } else {
-      await electiveAPI.update(form.value.id, payload)
+      await electiveAPI.update(form.id, payload)
       ElMessage.success('选修课已更新')
     }
-    dialogVisible.value = false
+    electiveDialog.close()
     await refreshAll()
   } catch (error) {
     /* 拦截器已提示 */
@@ -526,7 +513,8 @@ async function openStudents(row) {
   }
 }
 
-onMounted(refreshAll)
+// 列表由 useTable 在挂载时自动加载
+onMounted(() => Promise.all([loadOptions(), loadStats()]))
 </script>
 
 <style scoped lang="scss">

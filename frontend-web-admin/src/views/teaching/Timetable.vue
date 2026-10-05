@@ -100,7 +100,7 @@
     <!-- 排课 / 编辑弹窗 -->
     <el-dialog
       v-model="dialogVisible"
-      :title="dialogMode === 'add' ? '新增排课' : '编辑排课'"
+      :title="dialogTitle"
       width="620px"
       :close-on-click-modal="false"
     >
@@ -212,6 +212,7 @@ import { Plus, Delete, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { timetableAPI } from '@/api/timetable'
 import { useUserStore } from '@/stores/user'
+import { useDialog } from '@/composables/useDialog'
 import PageHeader from '@/components/common/PageHeader.vue'
 
 const userStore = useUserStore()
@@ -330,15 +331,10 @@ async function init() {
 }
 
 // ---------- 弹窗 ----------
-const dialogVisible = ref(false)
-const dialogMode = ref('add')
-const submitting = ref(false)
-const formRef = ref(null)
-
-const defaultForm = () => ({
+const entryDialog = useDialog({
   id: null,
-  semester: semester.value,
-  classId: classId.value,
+  semester: '',
+  classId: null,
   subjectId: null,
   teacherId: null,
   roomId: null,
@@ -348,7 +344,12 @@ const defaultForm = () => ({
   weekEnd: 20,
   note: ''
 })
-const form = ref(defaultForm())
+const dialogVisible = entryDialog.visible
+const dialogMode = entryDialog.mode
+const submitting = entryDialog.loading
+const formRef = entryDialog.formRef
+const form = entryDialog.formData
+const dialogTitle = computed(() => (dialogMode.value === 'add' ? '新增排课' : '编辑排课'))
 
 const formRules = {
   semester: [{ required: true, message: '请选择学期', trigger: 'change' }],
@@ -360,18 +361,16 @@ const formRules = {
 }
 
 function openAdd(day, period) {
-  dialogMode.value = 'add'
-  form.value = {
-    ...defaultForm(),
+  entryDialog.openAdd({
+    semester: semester.value,
+    classId: classId.value,
     dayOfWeek: day || 1,
     period: period || 1
-  }
-  dialogVisible.value = true
+  })
 }
 
 function openEdit(entry) {
-  dialogMode.value = 'edit'
-  form.value = {
+  entryDialog.openEdit({
     id: entry.id,
     semester: entry.semester,
     classId: entry.classId,
@@ -383,8 +382,7 @@ function openEdit(entry) {
     weekStart: entry.weekStart ?? 1,
     weekEnd: entry.weekEnd ?? 20,
     note: entry.note || ''
-  }
-  dialogVisible.value = true
+  })
 }
 
 function handleCellClick(day, period) {
@@ -403,7 +401,7 @@ async function handleSubmit() {
     return
   }
 
-  if (Number(form.value.weekStart) > Number(form.value.weekEnd)) {
+  if (Number(form.weekStart) > Number(form.weekEnd)) {
     ElMessage.warning('起始周不能大于结束周')
     return
   }
@@ -411,9 +409,9 @@ async function handleSubmit() {
   submitting.value = true
   try {
     // 提交前冲突预检，给出更友好的提示
-    const payload = { ...form.value }
+    const payload = { ...form }
     const checkRes = await timetableAPI.checkConflict(
-      dialogMode.value === 'edit' ? { ...payload, excludeId: form.value.id } : payload
+      dialogMode.value === 'edit' ? { ...payload, excludeId: form.id } : payload
     )
     if (checkRes.data?.hasConflict) {
       const list = checkRes.data.conflicts.map((c) => `· ${c.message}`).join('\n')
@@ -428,10 +426,10 @@ async function handleSubmit() {
       await timetableAPI.create(payload)
       ElMessage.success('排课成功')
     } else {
-      await timetableAPI.update(form.value.id, payload)
+      await timetableAPI.update(form.id, payload)
       ElMessage.success('排课已更新')
     }
-    dialogVisible.value = false
+    entryDialog.close()
     await refresh()
   } catch (error) {
     /* 拦截器已提示 */
@@ -447,7 +445,7 @@ async function removeEntry(entry) {
 }
 
 async function handleDeleteFromDialog() {
-  const entry = { id: form.value.id, subjectName: '', dayOfWeek: form.value.dayOfWeek, period: form.value.period }
+  const entry = { id: form.id, subjectName: '', dayOfWeek: form.dayOfWeek, period: form.period }
   try {
     await ElMessageBox.confirm('确定删除该排课吗？', '删除确认', {
       type: 'warning',
@@ -457,7 +455,7 @@ async function handleDeleteFromDialog() {
   } catch (error) {
     return
   }
-  dialogVisible.value = false
+  entryDialog.close()
   try {
     await removeEntry(entry)
   } catch (error) {

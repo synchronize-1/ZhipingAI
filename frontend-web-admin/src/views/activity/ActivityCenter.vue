@@ -218,7 +218,7 @@
     <!-- ==================== 活动表单弹窗 ==================== -->
     <el-dialog
       v-model="dialogVisible"
-      :title="form.id ? '编辑活动' : '发布活动'"
+      :title="dialogTitle"
       width="640px"
       :close-on-click-modal="false"
     >
@@ -334,6 +334,8 @@ import PageHeader from '@/components/common/PageHeader.vue'
 import SearchForm from '@/components/common/SearchForm.vue'
 import DataTable from '@/components/common/DataTable.vue'
 import { useUserStore } from '@/stores/user'
+import { useTable } from '@/composables/useTable'
+import { useDialog } from '@/composables/useDialog'
 import { activityAPI } from '@/api/activities'
 
 defineOptions({ name: 'ActivityCenter' })
@@ -344,12 +346,29 @@ const isStaff = computed(() => role.value === 'admin' || role.value === 'teacher
 
 // ==================== 状态 ====================
 const activeTab = ref('list')
-const loading = ref(false)
-const activities = ref([])
-const pagination = reactive({ page: 1, pageSize: 9, total: 0 })
-const searchParams = reactive({ keyword: '', category: '', status: '' })
 const stats = reactive({ total: 0, upcoming: 0, ongoing: 0, completed: 0, registrations: 0 })
 const categories = ref(['文艺', '学术', '体育', '公益', '社团', '就业', '其他'])
+
+// 活动列表：分页 / 搜索统一由 useTable 承担
+const fetchActivities = (params) => {
+  const cleaned = {}
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== '' && v !== undefined && v !== null) cleaned[k] = v
+  })
+  return activityAPI.list(cleaned)
+}
+const {
+  loading,
+  dataList: activities,
+  pagination,
+  searchParams,
+  fetchData: loadActivities,
+  handleSearch,
+  handleReset,
+  handlePageChange,
+  handleSizeChange
+} = useTable(fetchActivities, { keyword: '', category: '', status: '' })
+pagination.pageSize = 9
 
 const allActivities = ref([])
 const manageActivityId = ref(null)
@@ -360,10 +379,8 @@ const regLoading = ref(false)
 const myRegistrations = ref([])
 const myLoading = ref(false)
 
-const dialogVisible = ref(false)
-const saving = ref(false)
-const formRef = ref(null)
-const form = reactive({
+// 活动表单弹窗
+const activityDialog = useDialog({
   id: null,
   title: '',
   category: '',
@@ -374,6 +391,12 @@ const form = reactive({
   cover: '',
   description: ''
 })
+const dialogVisible = activityDialog.visible
+const saving = activityDialog.loading
+const formRef = activityDialog.formRef
+const form = activityDialog.formData
+const isEdit = computed(() => activityDialog.mode.value === 'edit')
+const dialogTitle = computed(() => (isEdit.value ? '编辑活动' : '发布活动'))
 
 const detailVisible = ref(false)
 const detail = ref(null)
@@ -484,26 +507,6 @@ async function loadStats() {
   }
 }
 
-async function loadActivities() {
-  loading.value = true
-  try {
-    const res = await activityAPI.list({
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      keyword: searchParams.keyword || undefined,
-      category: searchParams.category || undefined,
-      status: searchParams.status || undefined
-    })
-    activities.value = res.data.list
-    pagination.total = res.data.total
-  } catch (e) {
-    activities.value = []
-    pagination.total = 0
-  } finally {
-    loading.value = false
-  }
-}
-
 // 报名管理下拉用的完整活动列表
 async function loadAllActivities() {
   try {
@@ -561,60 +564,22 @@ function handleSearchParamsUpdate(val) {
   Object.assign(searchParams, val)
 }
 
-function handleSearch() {
-  pagination.page = 1
-  loadActivities()
-}
-
-function handleReset() {
-  searchParams.keyword = ''
-  searchParams.category = ''
-  searchParams.status = ''
-  pagination.page = 1
-  loadActivities()
-}
-
-function handlePageChange(page) {
-  pagination.page = page
-  loadActivities()
-}
-
-function handleSizeChange(size) {
-  pagination.pageSize = size
-  pagination.page = 1
-  loadActivities()
-}
-
-function resetForm() {
-  form.id = null
-  form.title = ''
-  form.category = ''
-  form.location = ''
-  form.startTime = ''
-  form.endTime = ''
-  form.maxParticipants = 100
-  form.cover = ''
-  form.description = ''
-  formRef.value?.clearValidate()
-}
-
 function openCreate() {
-  resetForm()
-  dialogVisible.value = true
+  activityDialog.openAdd()
 }
 
 function openEdit(a) {
-  resetForm()
-  form.id = a.id
-  form.title = a.title
-  form.category = a.category || ''
-  form.location = a.location || ''
-  form.startTime = a.startTime ? dayjs(a.startTime).format('YYYY-MM-DD HH:mm:ss') : ''
-  form.endTime = a.endTime ? dayjs(a.endTime).format('YYYY-MM-DD HH:mm:ss') : ''
-  form.maxParticipants = a.maxParticipants || 100
-  form.cover = a.cover || ''
-  form.description = a.description || ''
-  dialogVisible.value = true
+  activityDialog.openEdit({
+    id: a.id,
+    title: a.title,
+    category: a.category || '',
+    location: a.location || '',
+    startTime: a.startTime ? dayjs(a.startTime).format('YYYY-MM-DD HH:mm:ss') : '',
+    endTime: a.endTime ? dayjs(a.endTime).format('YYYY-MM-DD HH:mm:ss') : '',
+    maxParticipants: a.maxParticipants || 100,
+    cover: a.cover || '',
+    description: a.description || ''
+  })
 }
 
 async function handleSubmit() {
@@ -634,14 +599,14 @@ async function handleSubmit() {
 
   saving.value = true
   try {
-    if (form.id) {
+    if (isEdit.value) {
       await activityAPI.update(form.id, payload)
       ElMessage.success('活动已更新')
     } else {
       await activityAPI.create(payload)
       ElMessage.success('活动发布成功')
     }
-    dialogVisible.value = false
+    activityDialog.close()
     await Promise.all([loadActivities(), loadStats(), loadAllActivities()])
     if (manageActivityId.value) loadRegistrations()
   } finally {
@@ -714,7 +679,8 @@ async function openDetail(a) {
 
 // ==================== 初始化 ====================
 onMounted(async () => {
-  await Promise.all([loadCategories(), loadStats(), loadActivities(), loadAllActivities()])
+  // 活动列表由 useTable 在挂载时自动加载
+  await Promise.all([loadCategories(), loadStats(), loadAllActivities()])
   if (isStaff.value) {
     // 报名管理默认选中第一个活动
     if (allActivities.value.length) {

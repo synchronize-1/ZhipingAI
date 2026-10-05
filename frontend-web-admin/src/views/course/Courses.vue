@@ -128,7 +128,7 @@
     </el-dialog>
 
     <!-- 添加/编辑课程对话框 -->
-    <el-dialog v-model="showAddDialog" :title="editingCourse ? '编辑课程' : '添加课程'" width="600px">
+    <el-dialog v-model="showAddDialog" :title="dialogTitle" width="600px">
       <el-form ref="formRef" :model="courseForm" :rules="formRules" label-width="100px">
         <el-row :gutter="20">
           <el-col :span="12">
@@ -176,7 +176,7 @@
       </el-form>
       <template #footer>
         <el-button @click="showAddDialog = false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="submitting">{{ editingCourse ? '保存修改' : '添加课程' }}</el-button>
+        <el-button type="primary" @click="submitForm" :loading="submitting">{{ isEdit ? '保存修改' : '添加课程' }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -187,13 +187,13 @@ import { ref, computed, onMounted } from 'vue'
 import { Plus, User, Location } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { courseAPI } from '@/api/courses'
-import CourseInteraction from '@/components/CourseInteraction.vue'
-import LearningResources from '@/components/LearningResources.vue'
+import { useDialog } from '@/composables/useDialog'
+import CourseInteraction from './components/CourseInteraction.vue'
+import LearningResources from './components/LearningResources.vue'
 
 defineOptions({ name: 'Courses' })
 
 const loading = ref(false)
-const submitting = ref(false)
 const loadingSemesters = ref(false)
 const loadingTeachers = ref(false)
 const courses = ref([])
@@ -202,14 +202,12 @@ const teacherList = ref([])
 const searchQuery = ref('')
 const semesterFilter = ref('')
 const teacherFilter = ref('')
-const showAddDialog = ref(false)
 const showDetailDialog = ref(false)
 const selectedCourse = ref(null)
 const detailTab = ref('intro')
-const editingCourse = ref(null)
-const formRef = ref()
 
-const courseForm = ref({
+const courseDialog = useDialog({
+  id: null,
   name: '',
   code: '',
   teacherName: '',
@@ -218,6 +216,12 @@ const courseForm = ref({
   semester: '',
   description: ''
 })
+const showAddDialog = courseDialog.visible
+const formRef = courseDialog.formRef
+const courseForm = courseDialog.formData
+const submitting = courseDialog.loading
+const isEdit = computed(() => courseDialog.mode.value === 'edit')
+const dialogTitle = computed(() => (isEdit.value ? '编辑课程' : '添加课程'))
 
 const formRules = {
   name: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
@@ -255,8 +259,8 @@ const fetchSemesters = async () => {
     const res = await courseAPI.semesters()
     if (res.success) {
       semesterList.value = res.data || []
-      if (semesterList.value.length > 0 && !courseForm.value.semester) {
-        courseForm.value.semester = semesterList.value[0]
+      if (semesterList.value.length > 0 && !courseForm.semester) {
+        courseForm.semester = semesterList.value[0]
       }
     }
   } catch (error) {
@@ -299,17 +303,7 @@ const fetchCourses = async () => {
 
 // 打开添加对话框
 const openAddDialog = () => {
-  editingCourse.value = null
-  courseForm.value = {
-    name: '',
-    code: '',
-    teacherName: '',
-    credits: 3,
-    location: '',
-    semester: semesterList.value[0] || '',
-    description: ''
-  }
-  showAddDialog.value = true
+  courseDialog.openAdd({ semester: semesterList.value[0] || '' })
 }
 
 // 删除课程
@@ -344,8 +338,8 @@ const viewCourse = (course) => {
 
 // 编辑课程
 const editCourse = (course) => {
-  editingCourse.value = course
-  courseForm.value = {
+  courseDialog.openEdit({
+    id: course.id,
     name: course.name,
     code: course.code,
     teacherName: course.teacher_name || '',
@@ -353,8 +347,7 @@ const editCourse = (course) => {
     location: course.location || '',
     semester: course.semester,
     description: course.description || ''
-  }
-  showAddDialog.value = true
+  })
 }
 
 // 提交表单
@@ -364,41 +357,41 @@ const submitForm = async () => {
     if (!valid) return
     submitting.value = true
     try {
-      if (editingCourse.value) {
+      if (isEdit.value) {
         // 编辑课程
-        // await courseAPI.update(editingCourse.value.id, courseForm.value)
-        const idx = courses.value.findIndex(c => c.id === editingCourse.value.id)
+        // await courseAPI.update(courseForm.id, courseForm)
+        const idx = courses.value.findIndex(c => c.id === courseForm.id)
         if (idx !== -1) {
           courses.value[idx] = {
             ...courses.value[idx],
-            name: courseForm.value.name,
-            code: courseForm.value.code,
-            teacher_name: courseForm.value.teacherName,
-            credits: courseForm.value.credits,
-            location: courseForm.value.location,
-            semester: courseForm.value.semester,
-            description: courseForm.value.description
+            name: courseForm.name,
+            code: courseForm.code,
+            teacher_name: courseForm.teacherName,
+            credits: courseForm.credits,
+            location: courseForm.location,
+            semester: courseForm.semester,
+            description: courseForm.description
           }
         }
         ElMessage.success('课程更新成功')
       } else {
         // 创建课程
         await courseAPI.create({
-          name: courseForm.value.name,
-          code: courseForm.value.code,
-          teacher_name: courseForm.value.teacherName,
-          credits: courseForm.value.credits,
-          location: courseForm.value.location,
-          semester: courseForm.value.semester,
-          description: courseForm.value.description
+          name: courseForm.name,
+          code: courseForm.code,
+          teacher_name: courseForm.teacherName,
+          credits: courseForm.credits,
+          location: courseForm.location,
+          semester: courseForm.semester,
+          description: courseForm.description
         })
         ElMessage.success('课程添加成功')
         await fetchCourses()
       }
-      showAddDialog.value = false
+      courseDialog.close()
     } catch (error) {
       console.error('提交失败:', error)
-      ElMessage.error(editingCourse.value ? '更新失败' : '添加失败')
+      ElMessage.error(isEdit.value ? '更新失败' : '添加失败')
     } finally {
       submitting.value = false
     }
